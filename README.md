@@ -6,10 +6,10 @@
 
 ## 界面预览
 
-<img src="assets/Screensettings.png" width="600" alt="画面设置界面">
-<img src="assets/Gamesettings.png" width="600" alt="游戏设置界面">
+<img src="assets/Gamesettings2025.png" width="600" alt="2025 款游戏设置界面">
+<img src="assets/Lights2025.png" width="600" alt="2025 款炫彩灯设置界面">
 
-*截图来自上游项目，供界面参考。*
+*截图来自本地运行并连接 2025 款实机的程序。*
 
 ## 功能
 

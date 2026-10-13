@@ -25,6 +25,8 @@ Java 回执用例使用模拟 native/Provider 接口，编译并执行实际 hel
 
 同日本地部署的 Nuitka standalone 构建发现旧标题栏 slot 在控件删除后仍响应标题变化；修复后增加回归用例，466 项测试通过。已部署程序并验证可见窗口与实机连接；该本地构建未创建发布标签。
 
+随后完成 OSD 对照适配，478 项测试通过，新增控制已逐档实机验收并更新本地 standalone 程序。安装后再次复核 50 个原生校色字段、112 个画质数据库字段；实际窗口、FreeSync 状态、灯效页面和深色主题说明文字已检查。详情见 [OSD 对照表](2025-osd-options.md)。
+
 ## Windows 构建
 
 使用已安装项目依赖的 Python 运行构建脚本。发布编译应使用 python.org 的 Python，安装器构建另需 Inno Setup。
