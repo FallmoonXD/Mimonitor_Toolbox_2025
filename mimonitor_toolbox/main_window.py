@@ -97,6 +97,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
 
     def __init__(self):
         super().__init__()
+        self._bind_live_title_bar()
         QApplication.setQuitOnLastWindowClosed(False)
         self.initialize_device_features()
         self.mode_btns = {}
@@ -172,6 +173,17 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
         QTimer.singleShot(0, self._update_freesync_memory_status_label)
         QTimer.singleShot(900, self._auto_connect_on_startup)
         QApplication.instance().aboutToQuit.connect(self.cleanup_before_exit)
+
+    def _bind_live_title_bar(self):
+        # FluentWindow 初始化会替换标题栏。Nuitka 的 Python slot 可能仍连着
+        # 已删除的旧 CaptionLabel；只保留当前标题栏的标题与图标响应。
+        for signal, slot in ((self.windowTitleChanged, self.titleBar.setTitle),
+                             (self.windowIconChanged, self.titleBar.setIcon)):
+            try:
+                signal.disconnect()
+            except TypeError:
+                pass
+            signal.connect(slot)
 
     def setup_tray(self):
         self.tray_icon = QSystemTrayIcon(self)

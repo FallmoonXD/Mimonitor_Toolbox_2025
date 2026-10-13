@@ -23,6 +23,8 @@ Java 回执用例使用模拟 native/Provider 接口，编译并执行实际 hel
 
 2026-10-13 原生模式控制改动的完整 465 项本地测试通过，包含实际 Java helper 代码的模拟回执测试。实机结果与尚待验收的操作见 [兼容记录](2025-compatibility.md)。
 
+同日本地部署的 Nuitka standalone 构建发现旧标题栏 slot 在控件删除后仍响应标题变化；修复后增加回归用例，466 项测试通过。已部署程序并验证可见窗口与实机连接；该本地构建未创建发布标签。
+
 ## Windows 构建
 
 使用已安装项目依赖的 Python 运行构建脚本。发布编译应使用 python.org 的 Python，安装器构建另需 Inno Setup。

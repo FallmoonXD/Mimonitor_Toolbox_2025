@@ -4,6 +4,8 @@ from unittest import mock
 
 import _isolation  # noqa: F401
 from PyQt6.QtWidgets import QApplication
+from PyQt6 import sip
+from qfluentwidgets import CaptionLabel
 from mimonitor_toolbox import adb as adb_runtime, device_features, presets
 from mimonitor_toolbox.main_window import App
 from mimonitor_toolbox.picture_modes import (
@@ -150,3 +152,15 @@ class NativeSignalUiTests(unittest.TestCase):
         window._on_picture_signal_read(window._connection_intent_generation - 1, window.adb.ip, 0, state(16, 0, 5))
         self.assertEqual(window.current_vals["g_video__picture_mode"], 13)
         self.assertEqual(window.picture_signal_label.text(), "当前信号：Dolby Vision")
+
+    def test_title_update_does_not_call_a_deleted_title_bar_label(self):
+        window = self.window
+        stale_label = CaptionLabel()
+        # 模拟打包态无法识别 QObject receiver 的旧 Python slot。
+        window.windowTitleChanged.connect(lambda title: stale_label.setText(title))
+        sip.delete(stale_label)
+        window._bind_live_title_bar()
+        with mock.patch("sys.excepthook") as errors:
+            window.setWindowTitle("红米 G Pro 27U 2025 Toolbox - 已连接")
+        errors.assert_not_called()
+        self.assertEqual(window.titleBar.titleLabel.text(), window.windowTitle())
