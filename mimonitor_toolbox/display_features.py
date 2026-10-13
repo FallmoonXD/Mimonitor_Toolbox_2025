@@ -31,6 +31,7 @@ from .presets import (
     missing_keys,
     new_id,
     unique_name,
+    freesync_is_on,
 )
 from .widgets import LoadingSpinner, OverlayResizeFilter
 from .windows import query_windows_hdr_enabled, resolve_hdr_target_display
@@ -1130,7 +1131,7 @@ class DisplayFeaturesMixin:
                 return 1 if as_int(fs) == 1 else 0
             else:
                 fs = self.adb.jni_get("g_video__freesync_switch", check=check)
-                return 1 if as_int(fs) == 3 else 0
+                return 1 if freesync_is_on("g_video__freesync_switch", as_int(fs)) else 0
         else:
             # Standard settings key
             v = self.adb.get(sk, check=check)
@@ -1827,7 +1828,7 @@ class DisplayFeaturesMixin:
             label.setStyleSheet("color: #f0b85a; font-size: 12px;")
         elif DisplayFeaturesMixin._is_game_mode_active(self):
             label.setText("当前为游戏模式；下方高亮为当前生效值。")
-            label.setStyleSheet("font-size: 12px;")
+            FluentStyleSheet.LABEL.apply(label)
         else:
             label.setText("当前不是游戏模式；下方高亮为记忆值，功能当前未生效。")
             label.setStyleSheet("color: #f0b85a; font-size: 12px;")

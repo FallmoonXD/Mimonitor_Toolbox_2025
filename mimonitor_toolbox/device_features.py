@@ -1579,7 +1579,7 @@ class DeviceFeaturesMixin:
                             except (TypeError, ValueError): pass
                             try:
                                 jni_vals["freesync"] = (
-                                    1 if int(mode_vals.get("g_video__freesync_switch")) == 3 else 0
+                                    1 if freesync_is_on("g_video__freesync_switch", int(mode_vals.get("g_video__freesync_switch"))) else 0
                                 )
                             except (TypeError, ValueError): pass
 

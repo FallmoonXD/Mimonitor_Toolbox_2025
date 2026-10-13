@@ -7,6 +7,13 @@ from mimonitor_toolbox.device_features import apply_picture_jni_overrides
 
 
 class OsdProtectionTests(unittest.TestCase):
+    def test_hdmi_freesync_one_is_enabled_on_2025(self):
+        from mimonitor_toolbox.presets import freesync_is_on
+        self.assertTrue(freesync_is_on('g_video__freesync_switch', '1'))
+        self.assertTrue(freesync_is_on('g_video__freesync_switch', '3'))
+        self.assertFalse(freesync_is_on('g_video__freesync_switch', '0'))
+        self.assertFalse(freesync_is_on('g_video__dp_adaptive_sync', '3'))
+
     def test_dark_enhancement_preserves_gamma_and_reserved_bytes(self):
         before = 0x1234017F
         key, value = native_option_value('dark_enhancement', 3, {'g_video__vid_gamma_mode': before})

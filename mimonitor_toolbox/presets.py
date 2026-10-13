@@ -91,7 +91,9 @@ def freesync_on_value(jni_key):
 
 def freesync_is_on(jni_key, raw):
     try:
-        return int(str(raw).strip()) == freesync_on_value(jni_key)
+        value = int(str(raw).strip())
+        # The 2025 HDMI OSD also reports native 1 for enabled FreeSync.
+        return value in (1, 3) if jni_key.endswith("freesync_switch") else value == 1
     except (TypeError, ValueError):
         return False
 

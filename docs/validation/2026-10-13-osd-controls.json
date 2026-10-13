@@ -98,5 +98,11 @@
     "unrelated_native_changes": {},
     "picture_database_changes": {}
   },
-  "offline_tests_passed": 477
+  "offline_tests_passed": 478,
+  "freesync_read": {
+    "HDMI_EDID": 3,
+    "native_value": 1,
+    "enabled": true,
+    "write_and_EDID_linkage_verified": false
+  }
 }
