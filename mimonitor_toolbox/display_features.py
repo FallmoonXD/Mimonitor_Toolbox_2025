@@ -38,6 +38,7 @@ from .picture_modes import (
     DOLBY_NATIVE_MODES, NATIVE_MODE_CHOICES, native_mode_group,
     picture_mode_choices, picture_signal_family,
 )
+from .osd_2025 import SOURCE_CHOICES, LIGHT_KEYS
 
 _preset_overlay_filter = None
 
@@ -149,10 +150,14 @@ class DisplayFeaturesMixin:
             ),
             "input_source": (
                 "mitv.tvplayer.hdmi.last.source",
-                [(23, "HDMI 1"), (24, "HDMI 2"), (29, "DP"), (30, "USBC")],
+                list(SOURCE_CHOICES),
                 "信号源切换",
                 lambda val, name: self._set("mitv.tvplayer.hdmi.last.source", val, f"信号源: {name}")
-            )
+            ),
+            "dark_enhancement": ("osd_dark_enhancement", [(0, "关"), (1, "低"), (2, "中"), (3, "高")],
+                "暗区增强", lambda val, name: self._set_osd_option("dark_enhancement", val, name)),
+            "color_range": ("tv_picture_video_hdmi_rgb_range", [(0, "自动"), (1, "全范围"), (2, "有限范围")],
+                "色彩动态范围", lambda val, name: self._set_osd_option("color_range", val, name)),
         }
 
     def tray_entry_catalog(self):
@@ -998,12 +1003,7 @@ class DisplayFeaturesMixin:
         show_hud=False 用于托盘滑块——菜单里已经内联显示数值，再弹悬浮窗是重复。
         """
         setting = cfg["setting"]
-        raw_value = value - int(cfg.get("ui_offset", 0))
-
-        if cfg.get("screen_light"):
-            self.current_vals[setting] = raw_value
-            self.values_signal.emit({setting: raw_value})
-        elif cfg.get("color_gain"):
+        if cfg.get("color_gain"):
             self._ensure_color_gain_values()
             self.current_vals[setting] = value
             self.values_signal.emit({setting: value})
@@ -1064,14 +1064,6 @@ class DisplayFeaturesMixin:
 
     def _set_adjustable_display_value(self, param, cfg, value):
         setting = cfg["setting"]
-        raw_value = value - int(cfg.get("ui_offset", 0))
-
-        if cfg.get("screen_light"):
-            self._set_screen_light_illumination(value)
-            self.current_vals[setting] = raw_value
-            self.values_signal.emit({setting: raw_value})
-            return
-
         if cfg.get("color_gain"):
             self._ensure_color_gain_values()
             self._set_color_gain(cfg["label"], setting, cfg.get("jni"), value)
@@ -2115,6 +2107,10 @@ class DisplayFeaturesMixin:
 
         def operation():
             with self.adb.transaction():
+                if jk == "g_video__vid_gamut_mapping_mode":
+                    state = self.adb.read_picture_state()
+                    if picture_signal_family(state["g_video__picture_mode"], state["g_dovi_info__"]) not in ("SDR", "HDR"):
+                        raise RuntimeError("当前输入不能调节色域；Dolby Vision 由杜比处理色彩空间")
                 self.adb.jni_set(jk, v, check=True)
                 self.adb.put(sk, str(v), check=True)
                 if osd_sk:
@@ -2387,72 +2383,84 @@ class DisplayFeaturesMixin:
 
         self._run_adb_action("FreeSync", operation, success, failure)
 
-    def _screen_light_int(self, key, default):
-        try:
-            return int(self.current_vals.get(key, default))
-        except (TypeError, ValueError):
-            return default
-
-    def _commit_screen_light(self, message, updates):
+    def _set_osd_option(self, option, value, name):
         if not self.check_connection():
             return
-        self._mark_adb_busy(2.0)
-        previous = {key: self.current_vals.get(key) for key in updates}
-        self.current_vals.update(updates)
-        for key, val in updates.items():
-            self._optimistic_highlight(key, val)
-
-        mode = self._screen_light_int("atmosphere_light_switcher_pm2", 4)
-        illumination = self._screen_light_int("atmosphere_light_illumination", 9)
-        color_temp = self._screen_light_int("atmosphere_light_color_temp", 1)
-        color_value = self._screen_light_int("atmosphere_light_color_value", 0)
-
-        def operation():
-            with self.adb.transaction():
-                self.adb.put("atmosphere_light_switcher_pm2", str(mode), check=True)
-                self.adb.put("atmosphere_light_illumination", str(illumination), check=True)
-                self.adb.put("atmosphere_light_color_temp", str(color_temp), check=True)
-                self.adb.put("atmosphere_light_color_value", str(color_value), check=True)
-                if mode == 0:
-                    self.adb.colorful_led("lighting", illumination, color_temp, check=True)
-                elif mode == 1:
-                    self.adb.colorful_led("ambient", check=True)
-                elif mode == 2:
-                    self.adb.colorful_led("solid", illumination, color_value, check=True)
-                elif mode == 3:
-                    self.adb.colorful_led("cycle", check=True)
-                else:
-                    self.adb.colorful_led("off", check=True)
-
+        title = {"dark_enhancement": "暗区增强", "color_range": "色彩动态范围",
+                 "eye_protection": "低蓝光护眼模式"}[option]
         def success():
+            self.log(f"{title}: {name}")
+            self._note_picture_change()
+            self._force_refresh_page("picturePage")
+            self._force_refresh_page("gamePage")
+        self._run_adb_action(title, lambda: self.adb.osd_option(option, value), success,
+            lambda: self._force_refresh_page("picturePage"))
+
+    def _open_monitor_osd(self):
+        if not self.check_connection():
+            return
+        self._run_adb_action("显示器 OSD", lambda: self.adb.shell(
+            "am startservice -n com.xiaomi.mitv.settings/.TvSettingService "
+            "-a com.xiaomi.mitv.settings.DISPLAY_SCREEN_SETTINGS", check=True),
+            lambda: self.log("已打开显示器 OSD"))
+
+    def _set_frame_display(self, value):
+        if not self.check_connection():
+            return
+        def success():
+            self.values_signal.emit({"key_free_sync_frame_enable": value})
+            self.log("帧率显示: " + ("开" if value else "关"))
+        self._run_adb_action("帧率显示", lambda: self.adb.frame_display(value), success,
+                             lambda: self._force_refresh_page("gamePage"))
+
+    def _set_monitor_light(self, key, value, message):
+        if not self.check_connection():
+            return
+        result = {}
+        def operation():
+            result.update(self.adb.monitor_lights({key: value}))
+        def success():
+            self.values_signal.emit(result)
             self.log(message)
+        self._run_adb_action("炫彩灯", operation, success,
+                             lambda: self._force_refresh_page("lightPage"))
 
-        def failure():
-            restored = {key: val for key, val in previous.items() if val is not None}
-            if restored:
-                self.current_vals.update(restored)
-                self.values_signal.emit(restored)
+    def _update_monitor_light_controls(self):
+        vals = getattr(self, "current_vals", {})
+        try:
+            on, effect, color, same = [int(vals[key]) for key in LIGHT_KEYS]
+            valid = on in (0, 1) and effect in range(4) and color in range(12) and same in (0, 1)
+        except (KeyError, TypeError, ValueError):
+            valid, on, effect, same = False, 0, 0, 0
+        enabled = {LIGHT_KEYS[0]: valid, LIGHT_KEYS[1]: valid and on and not same,
+                   LIGHT_KEYS[2]: valid and on and not same and effect in (0, 1),
+                   LIGHT_KEYS[3]: valid and on}
+        for key, active in enabled.items():
+            for button in getattr(self, "state_buttons", {}).get(key, {}).values():
+                button.setEnabled(bool(active))
 
-        self._run_adb_action("屏幕灯", operation, success, failure)
-
-    def _set_screen_light_mode(self, val, name):
-        self._commit_screen_light(f"屏幕灯模式: {name}", {"atmosphere_light_switcher_pm2": val})
-
-    def _set_screen_light_illumination(self, ui_val):
-        raw_val = max(0, min(14, int(ui_val) - 1))
-        self._commit_screen_light(f"屏幕灯亮度挡位: {int(ui_val)}", {"atmosphere_light_illumination": raw_val})
-
-    def _set_screen_light_color_temp(self, val, name):
-        self._commit_screen_light(
-            f"屏幕灯色温: {name}",
-            {"atmosphere_light_switcher_pm2": 0, "atmosphere_light_color_temp": val}
-        )
-
-    def _set_screen_light_color_value(self, val, name):
-        self._commit_screen_light(
-            f"屏幕灯颜色: {name}",
-            {"atmosphere_light_switcher_pm2": 2, "atmosphere_light_color_value": val}
-        )
+    def _update_osd_availability(self):
+        vals = getattr(self, "current_vals", {})
+        mode = DisplayFeaturesMixin._active_picture_scene_mode(self)
+        family = picture_signal_family(mode, vals.get("g_dovi_info__"))
+        gamut_card = getattr(self, "color_space_card", None)
+        if gamut_card is not None:
+            gamut_card.setEnabled(family in ("SDR", "HDR"))
+            gamut_card.setToolTip("Dolby Vision 输入由杜比处理色彩空间")
+        range_card = getattr(self, "color_range_card", None)
+        if range_card is not None:
+            available = (family in ("SDR", "HDR") and str(vals.get("mitv.tvplayer.hdmi.last.source")) in ("23", "24")
+                         and vals.get("tv_picture_video_hdmi_rgb_range") in (0, 1, 2))
+            range_card.setEnabled(available)
+            range_card.setToolTip("色彩动态范围适用于 HDMI SDR 或 HDR 输入")
+        dark_card = getattr(self, "dark_enhancement_card", None)
+        if dark_card is not None:
+            dark_card.setEnabled(is_game_picture_mode(mode) and vals.get("osd_dark_enhancement") in range(4))
+            dark_card.setToolTip("暗区增强需要游戏模式")
+        eye_card = getattr(self, "eye_protection_card", None)
+        if eye_card is not None:
+            eye_card.setEnabled(False)
+            eye_card.setToolTip("此固件的护眼开关会重载白平衡，目前仅显示状态")
 
     def _key(self, kcode):
         if not self.check_connection(): return

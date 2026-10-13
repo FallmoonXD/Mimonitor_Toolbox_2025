@@ -52,6 +52,7 @@ from .presets import (
     freesync_is_on,
     freesync_jni_key,
 )
+from .osd_2025 import LIGHT_KEYS, SOURCE_CHOICES, OSD_NATIVE_KEYS
 from .widgets import InstallProgressDialog, OverlayResizeFilter
 
 _global_overlay_filter = None
@@ -88,11 +89,22 @@ def apply_picture_jni_overrides(settings_vals, jni_batch_vals):
     覆盖 `settings_vals`。页面刷新与预设快照采集共用本函数，保证两边口径一致。
     """
     # 不支持的 native 字段可能返回 -1；它不是有效档位，也不能转成正常默认值。
+    requested_keys = set(jni_batch_vals)
     jni_batch_vals = {
         key: parsed for key, value in jni_batch_vals.items()
         if (parsed := _native_int(value)) is not None
     }
     jni_out = {}
+    packed = jni_batch_vals.get("g_video__vid_gamma_mode")
+    if "g_video__vid_gamma_mode" in requested_keys:
+        settings_vals["osd_dark_enhancement"] = ((packed >> 8) & 255) if packed is not None else None
+    for native_key, setting in (("g_fusion_picture__hdmi_rgb_range", "tv_picture_video_hdmi_rgb_range"),
+                               ("g_video__clr_eye_protection_mode", "osd_eye_protection"),
+                               ("g_video__vid_od_response_time", "picture_response_time")):
+        if native_key in requested_keys:
+            settings_vals[setting] = jni_batch_vals.get(native_key)
+    if packed is not None:
+        settings_vals["picture_gamma_mode"] = packed
 
     # factory WB getter 在 2025 固件上可能与当前 bank 不一致；快照用 native RGB。
     for suffix, setting in (("r", "picture_red_gain"), ("g", "picture_green_gain"),
@@ -214,10 +226,7 @@ class DeviceFeaturesMixin:
     def initialize_device_features(self):
         """初始化设备连接、扫描和页面加载所需的共享状态。"""
         self.adb = Adb("")
-        self._source_names = {
-            23: "HDMI 1", 24: "HDMI 2", 29: "DP", 30: "USBC",
-            "23": "HDMI 1", "24": "HDMI 2", "29": "DP", "30": "USBC",
-        }
+        self._source_names = {key: name for value, name in SOURCE_CHOICES for key in (value, str(value))}
         self.source_var_text = "未知"
         self._page_loaded = set()
         self._page_loading = set()
@@ -233,25 +242,24 @@ class DeviceFeaturesMixin:
                     "settings_display_hdr_color_tone", "picture_dynamic_definition",
                     "picture_response_time", "tv_picture_advanced_video_color_space",
                     "tv_picture_video_color_space", "tv_picture_light_sensor",
+                    "tv_picture_video_hdmi_rgb_range", "picture_gamma_mode",
+                    "mitv.tvplayer.hdmi.last.source",
+                    "mitv.settings.db.video.g_video__clr_eye_protection_mode",
                 ],
                 "jni": list(PICTURE_PRESET_JNI_KEYS),
             },
             "gamePage": {
                 "settings": [
                     "picture_mode", "picture_preset_scenario",
-                    "front_sight_index", "mt_game_dynamic_ft", "mt_game_scope",
-                    "mt_game_scope_night", "monitor_menu_fps_counter",
-                    "monitor_menu_stopwatch", "monitor_menu_timer",
+                    "front_sight_index", "key_free_sync_frame_enable", "picture_gamma_mode",
                     "mitv.tvplayer.hdmi.last.source",
                 ],
+                "jni": list(OSD_NATIVE_KEYS),
                 "jni_mode": True,
             },
             "sourcePage": {"settings": ["mitv.tvplayer.hdmi.last.source"]},
             "lightPage": {
-                "settings": [
-                    "atmosphere_light_switcher_pm2", "atmosphere_light_illumination",
-                    "atmosphere_light_color_temp", "atmosphere_light_color_value",
-                ],
+                "settings": list(LIGHT_KEYS),
             },
         }
         self.adb_connected = False
@@ -1405,6 +1413,10 @@ class DeviceFeaturesMixin:
         update_game_hint = getattr(self, "_update_game_mode_hint", None)
         if callable(update_game_hint):
             update_game_hint()
+        for method in ("_update_osd_availability", "_update_monitor_light_controls"):
+            callback = getattr(self, method, None)
+            if callable(callback):
+                callback()
 
         # 拿到新鲜的 picture_mode + front_sight_index 后按模式纠正准星
         reconcile_crosshair = getattr(self, "_reconcile_crosshair_mode_state", None)

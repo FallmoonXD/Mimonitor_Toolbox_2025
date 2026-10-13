@@ -555,6 +555,79 @@ class Adb:
     def read_picture_state(self):
         return self._native_helper_result("getPictureState", [], parse_native_picture_state)
 
+    def osd_option(self, option, value):
+        from .osd_2025 import native_option_value
+        from .core import is_game_picture_mode
+        with self.transaction():
+            if option == "eye_protection":
+                raise RuntimeError("此固件的护眼开关会重载白平衡；工具箱目前仅显示状态，以保留校色配置")
+            state = self.read_picture_state()
+            bank = state["g_video__picture_mode"]
+            family = picture_signal_family(bank, state["g_dovi_info__"])
+            if family not in ("SDR", "HDR", "Dolby Vision"):
+                raise RuntimeError("输入信号未确认，请刷新后重试")
+            if option == "dark_enhancement" and not is_game_picture_mode(bank):
+                raise RuntimeError("暗区增强需要游戏模式")
+            if option == "color_range":
+                source = self.get("mitv.tvplayer.hdmi.last.source", check=True).strip()
+                if source not in ("23", "24") or family == "Dolby Vision":
+                    raise RuntimeError("色彩动态范围需要 HDMI SDR 或 HDR 输入")
+            native = self.jni_batch_get_or_single(["g_video__vid_gamma_mode"], check=True)
+            key, target = native_option_value(option, value, native)
+            result = self._checked_native_action("setOsdOption", [key, target, 3],
+                                                {key: target}, expected_bank=bank)
+            setting = {"dark_enhancement": "picture_gamma_mode",
+                       "color_range": "tv_picture_video_hdmi_rgb_range",
+                       "eye_protection": "mitv.settings.db.video.g_video__clr_eye_protection_mode"}[option]
+            self.put(setting, target, check=True)
+            final = self.jni_batch_get_or_single([key, "g_video__picture_mode", "g_dovi_info__"], check=True)
+            if int(final[key]) != target or int(final["g_video__picture_mode"]) != bank or int(final["g_dovi_info__"]) != state["g_dovi_info__"]:
+                raise RuntimeError("OSD 配置最终回读不一致或输入已变化")
+            return result
+
+    def monitor_lights(self, updates):
+        from .osd_2025 import LIGHT_KEYS, light_commands
+        if not updates or set(updates) - set(LIGHT_KEYS):
+            raise ValueError("无效的炫彩灯选项")
+        with self.transaction():
+            values = {key: self.get(key, check=True).strip() for key in LIGHT_KEYS}
+            values.update(updates)
+            commands = light_commands(values)
+            self.check_and_heal_colorful_led_tool(check=True)
+            for mode, color in commands:
+                path = f"/sdcard/Download/Mimonitor_Toolbox/.led_action_{uuid.uuid4().hex}.txt"
+                command = build_tvservice_app_process_command(
+                    "/data/data/mitv.service/cache/ColorfulLedTool.jar",
+                    ["ColorfulLedTool", "raw", mode, color, path])
+                try:
+                    output = self.shell("mkdir -p /sdcard/Download/Mimonitor_Toolbox; "
+                        f"{command} >/dev/null; "
+                        f"i=0; while [ $i -lt 30 ] && [ ! -f {path} ]; do sleep 0.1; i=$((i+1)); done; "
+                        f"cat {path} 2>/dev/null", check=True)
+                    receipt = dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
+                    if receipt != {"mode": str(mode), "color": str(color), "return": "0", "__complete": "1"}:
+                        raise RuntimeError("炫彩灯驱动未确认写入")
+                finally:
+                    self.shell(f"rm -f {path}")
+            for key in updates:
+                self.put(key, int(values[key]), check=True)
+            actual = {key: int(self.get(key, check=True).strip()) for key in LIGHT_KEYS}
+            if actual != {key: int(values[key]) for key in LIGHT_KEYS}:
+                raise RuntimeError("炫彩灯菜单回读不一致")
+            return actual
+
+    def frame_display(self, value):
+        value = int(value)
+        if value not in (0, 1):
+            raise ValueError("无效的帧率显示选项")
+        with self.transaction():
+            self.put("key_free_sync_frame_enable", value, check=True)
+            output = self.shell("am startservice -n com.xiaomi.mitv.tvplayer/.service.TVPlayerService "
+                                "-a com.xiaomi.intent.action.frameview", check=True)
+            if "Error" in output or self.get("key_free_sync_frame_enable", check=True).strip() != str(value):
+                raise RuntimeError("帧率显示未确认，请刷新后重试")
+            return value
+
     def picture_mode(self, value, upd=3, check=True, expected_bank=None):
         if not check:
             raise ValueError("画面模式必须验收原生回读")

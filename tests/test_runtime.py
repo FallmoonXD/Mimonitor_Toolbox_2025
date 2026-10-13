@@ -1083,9 +1083,6 @@ class StateMachineTests(unittest.TestCase):
             "picture_mode": 14,
             "picture_preset_scenario": 14,
             "front_sight_index": 0,
-            "mt_game_dynamic_ft": 0,
-            "mt_game_scope": 0,
-            "mt_game_scope_night": 0,
             "mitv.tvplayer.hdmi.last.source": 23,
         }])
 

@@ -18,6 +18,7 @@ from .core import (
     HDR_TONE_MAPPING_UI_TO_MTK,
     XIAOMI_TO_MTK_COLOR_TEMP,
     is_hdr_tone_mapping_picture_mode,
+    is_game_picture_mode,
 )
 
 
@@ -47,6 +48,9 @@ PICTURE_PRESET_SETTINGS_KEYS = (
     "picture_response_time",
     "tv_picture_advanced_video_color_space",
     "tv_picture_video_color_space",
+    "tv_picture_video_hdmi_rgb_range", "picture_gamma_mode",
+    "mitv.tvplayer.hdmi.last.source",
+    "mitv.settings.db.video.g_video__clr_eye_protection_mode",
 )
 
 PICTURE_PRESET_OPTIONAL_JNI_KEYS = (
@@ -56,6 +60,8 @@ PICTURE_PRESET_OPTIONAL_JNI_KEYS = (
     "g_video__clr_gain_b",
     "g_video__picture_mode",
     "g_dovi_info__",
+    "g_video__vid_gamma_mode", "g_fusion_picture__hdmi_rgb_range",
+    "g_video__clr_eye_protection_mode", "g_video__vid_od_response_time",
 )
 
 PICTURE_PRESET_JNI_KEYS = (
@@ -252,6 +258,38 @@ def _needs_hdr_mode(values):
     return True, ""
 
 
+def _needs_dark_enhancement(values):
+    if values.get("picture_gamma_mode") is None:
+        return False, "旧预设未记录暗区增强，保持现状"
+    key = "g_video__picture_mode" if values.get("g_video__picture_mode") is not None else "picture_mode"
+    return (True, "") if is_game_picture_mode(values.get(key)) else (False, "暗区增强需要游戏模式")
+
+
+def _needs_color_range(values):
+    from .picture_modes import picture_signal_family
+    if values.get("tv_picture_video_hdmi_rgb_range") is None:
+        return False, "旧预设未记录色彩动态范围，保持现状"
+    key = "g_video__picture_mode" if values.get("g_video__picture_mode") is not None else "picture_mode"
+    if str(values.get("mitv.tvplayer.hdmi.last.source")) not in ("23", "24") or picture_signal_family(values.get(key)) not in ("SDR", "HDR"):
+        return False, "色彩动态范围需要 HDMI SDR 或 HDR 输入"
+    return True, ""
+
+
+def _apply_color_range(adb, values):
+    source = adb.get("mitv.tvplayer.hdmi.last.source", check=True).strip()
+    if source != str(values["mitv.tvplayer.hdmi.last.source"]):
+        raise RuntimeError("输入源与预设记录不同，停止应用色彩动态范围")
+    return adb.osd_option("color_range", _as_int(values, "tv_picture_video_hdmi_rgb_range"))
+
+
+def _needs_gamut(values):
+    from .picture_modes import picture_signal_family
+    key = "g_video__picture_mode" if values.get("g_video__picture_mode") is not None else "picture_mode"
+    if picture_signal_family(values.get(key)) not in ("SDR", "HDR"):
+        return False, "Dolby Vision 输入由杜比处理色彩空间"
+    return True, ""
+
+
 # 顺序即写入顺序。**FreeSync 第一、画面模式第二**，理由见模块文档字符串。
 PICTURE_ITEMS = (
     # FreeSync 排最前：它开着会把设备锁在游戏模式，必须先把它设成目标值
@@ -275,6 +313,7 @@ PICTURE_ITEMS = (
     PictureItem(
         "dynamic_definition", "动态清晰度",
         _jni_setting("g_video__vid_insert_black", "picture_dynamic_definition"),
+        lambda values: (False, "2025 款 OSD 不支持此功能，跳过旧预设中的设置"),
     ),
     PictureItem(
         "response_time", "灰阶响应时间",
@@ -285,7 +324,12 @@ PICTURE_ITEMS = (
         _jni_setting("g_video__vid_gamut_mapping_mode",
                      "tv_picture_advanced_video_color_space",
                      "tv_picture_video_color_space"),
+        _needs_gamut,
     ),
+    PictureItem("dark_enhancement", "暗区增强",
+                lambda adb, values: adb.osd_option("dark_enhancement", (_as_int(values, "picture_gamma_mode") >> 8) & 255),
+                _needs_dark_enhancement),
+    PictureItem("color_range", "色彩动态范围", _apply_color_range, _needs_color_range),
 )
 
 
@@ -362,7 +406,7 @@ def apply_preset(adb, values, on_item=None):
             result.failed.append((item.label, str(exc)))
             if on_item:
                 on_item(item, "failed", str(exc))
-            if item.id in ("picture_mode", "color_gains", "hdr_tone_mapping"):
+            if item.id in ("picture_mode", "color_gains", "hdr_tone_mapping", "dark_enhancement", "color_range"):
                 result.skipped.extend((remaining.label, "原生写入未确认，停止写入画质参数")
                                       for remaining in PICTURE_ITEMS[index + 1:])
                 break
@@ -421,7 +465,7 @@ def missing_keys(values):
         "picture_brightness", "picture_contrast", "picture_saturation",
         "picture_hue", "picture_sharpness", "picture_color_temperature",
         "picture_red_gain", "picture_green_gain", "picture_blue_gain",
-        "picture_local_dimming", "picture_dynamic_definition",
+        "picture_local_dimming",
         "picture_response_time", "tv_picture_advanced_video_color_space",
         "settings_display_hdr_color_tone",
     }

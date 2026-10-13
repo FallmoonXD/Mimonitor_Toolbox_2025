@@ -66,6 +66,8 @@ Windows 的开关行为也见 [Microsoft HDR 设置说明](https://support.micro
 
 ## 其他兼容处理与后续验收
 
+2025 款 OSD 选项已另行核对并适配，见 [OSD 对照表](2025-osd-options.md) 与 [实机验收摘要](validation/2026-10-13-osd-controls.json)。新增暗区增强、HDMI 色彩动态范围、2025 帧率开关与炫彩灯协议；清理 PM2 专用入口。护眼模式因实测会重载白平衡，保留状态显示并禁止写入。
+
 原生 RGB 优先于有缩放差异的 factory getter；可选 getter 不支持时回退。桌面身份使用独立配置目录、启动项、ADB Server 默认端口与安装 AppId。两版仍控制同一台显示器，实机控制时使用一个版本。
 
 - [ ] 实机验收 RGB 分组写入；本轮只验证读取与参数保留。

@@ -81,6 +81,57 @@ class TrayTestBase(unittest.TestCase):
 class PageContractTests(unittest.TestCase):
     """捕获页面方法遗漏或被重新散落到主窗口的回归。"""
 
+    def test_2025_controls_match_signal_gates_and_exclude_pm2(self):
+        from mimonitor_toolbox.main_window import App
+        with mock.patch.object(App, "register_global_hotkeys"), mock.patch.object(App, "setup_tray"), \
+                mock.patch.object(App, "_auto_connect_on_startup"):
+            window = App()
+        try:
+            for key in ("picture_dynamic_definition", "mt_game_scope", "mt_game_scope_night", "mt_game_dynamic_ft",
+                        "monitor_menu_timer", "monitor_menu_stopwatch", "monitor_menu_fps_counter", "atmosphere_light_switcher_pm2"):
+                self.assertNotIn(key, window.state_buttons)
+            self.assertEqual(set(window.state_buttons["mitv.tvplayer.hdmi.last.source"]), {23, 24, 29})
+            self.assertEqual(set(window.state_buttons["atmosphere_light_preset_color"]), set(range(12)))
+            window._apply_polled_values({"g_video__picture_mode": 13, "g_dovi_info__": 1,
+                "osd_dark_enhancement": 2, "osd_eye_protection": 0, "tv_picture_video_hdmi_rgb_range": 0,
+                "mitv.tvplayer.hdmi.last.source": 23})
+            self.assertTrue(window.dark_enhancement_card.isEnabled())
+            self.assertTrue(window.state_buttons["osd_dark_enhancement"][2].isChecked())
+            self.assertFalse(window.eye_protection_card.isEnabled())
+            self.assertFalse(window.color_space_card.isEnabled())
+            self.assertFalse(window.color_range_card.isEnabled())
+            window._apply_polled_values({"g_video__picture_mode": 10, "g_dovi_info__": 0})
+            self.assertTrue(window.color_range_card.isEnabled())
+            window._apply_polled_values({"mitv.tvplayer.hdmi.last.source": 29})
+            self.assertFalse(window.color_range_card.isEnabled())
+            window._apply_polled_values({"g_video__picture_mode": None, "g_dovi_info__": None})
+            self.assertFalse(window.dark_enhancement_card.isEnabled())
+            self.assertFalse(window.color_space_card.isEnabled())
+        finally:
+            window._cleanup_done = True
+            window.deleteLater()
+            _qt_application.processEvents()
+
+    def test_2025_light_controls_follow_osd_enable_rules(self):
+        from mimonitor_toolbox.main_window import App
+        with mock.patch.object(App, "register_global_hotkeys"), mock.patch.object(App, "setup_tray"), \
+                mock.patch.object(App, "_auto_connect_on_startup"):
+            window = App()
+        try:
+            window._apply_polled_values({"atmosphere_light_switcher": 1, "atmosphere_light_effect": 0,
+                "atmosphere_light_preset_color": 10, "atmosphere_light_same_color": 0})
+            self.assertTrue(window.state_buttons["atmosphere_light_preset_color"][10].isChecked())
+            self.assertTrue(window.state_buttons["atmosphere_light_preset_color"][10].isEnabled())
+            window._apply_polled_values({"atmosphere_light_same_color": 1})
+            self.assertFalse(window.state_buttons["atmosphere_light_preset_color"][10].isEnabled())
+            self.assertFalse(window.state_buttons["atmosphere_light_effect"][0].isEnabled())
+            window._apply_polled_values({"atmosphere_light_switcher": 0})
+            self.assertFalse(window.state_buttons["atmosphere_light_same_color"][1].isEnabled())
+        finally:
+            window._cleanup_done = True
+            window.deleteLater()
+            _qt_application.processEvents()
+
     def test_all_page_builders_are_owned_by_pages_mixin(self):
         from mimonitor_toolbox.pages import PagesMixin
 
@@ -98,7 +149,6 @@ class PageContractTests(unittest.TestCase):
             "_make_remote_page",
             "_add_slider",
             "_add_color_gain_slider",
-            "_add_light_slider",
             "_btn_section",
         }
 
@@ -169,7 +219,8 @@ class PageContractTests(unittest.TestCase):
         self.assertIsNotNone(hint)
         self.assertIn("记忆值", hint.text())
         self.assertIn("当前未生效", hint.text())
-        self.assertTrue(window.state_buttons["mt_game_scope"][5].isChecked())
+        self.assertTrue(window.state_buttons["front_sight_index"][0].isChecked())
+        self.assertNotIn("mt_game_scope", window.state_buttons)
         window._cleanup_done = True
         window.deleteLater()
         _qt_application.processEvents()

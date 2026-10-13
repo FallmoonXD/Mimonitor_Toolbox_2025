@@ -255,15 +255,9 @@ ADJUSTABLE_HOTKEY_PARAMS = {
         "label": "蓝色增益", "setting": "picture_blue_gain", "slider": "blue_gain",
         "jni": "g_video__clr_gain_b", "min": 524, "max": 1524, "step": 10, "color_gain": True,
     },
-    "atmosphere_illumination": {
-        "label": "屏幕灯亮度", "setting": "atmosphere_light_illumination", "slider": "atmosphere_illumination",
-        "min": 1, "max": 15, "step": 1, "ui_offset": 1, "screen_light": True,
-    },
 }
 PICTURE_MODE_GROUPS = NATIVE_MODE_GROUPS
-GAME_FEATURE_KEYS = (
-    "front_sight_index", "mt_game_dynamic_ft", "mt_game_scope", "mt_game_scope_night",
-)
+GAME_FEATURE_KEYS = ("front_sight_index",)
 GAME_PICTURE_MODES = frozenset(PICTURE_MODE_GROUPS[10]) | frozenset(PICTURE_MODE_GROUPS[16]) | {13}
 
 

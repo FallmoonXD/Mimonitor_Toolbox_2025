@@ -1,45 +1,55 @@
-import android.os.HwBinder;
-import android.os.HwParcel;
-import android.os.IHwBinder;
+import java.io.FileWriter;
 
 public class ColorfulLedTool {
     private static final String BSP_IFACE = "vendor.mi.hardware.bspmserver@2.0::IBspMServer";
     private static final String CONFIG_IFACE = "vendor.mi.hardware.bspmserver@2.0::IVendorConfig";
 
-    private static IHwBinder getConfigBinder() throws Exception {
-        IHwBinder bsp = HwBinder.getService(BSP_IFACE, "default");
-        HwParcel req = new HwParcel();
-        HwParcel reply = new HwParcel();
-        req.writeInterfaceToken(BSP_IFACE);
+    private static final Class<?> PARCEL;
+    private static final Class<?> BINDER;
+    static {
         try {
-            bsp.transact(6, req, reply, 0);
-            reply.verifySuccess();
-            req.releaseTemporaryStorage();
-            int status = reply.readInt32();
-            IHwBinder config = reply.readStrongBinder();
+            PARCEL = Class.forName("android.os.HwParcel");
+            BINDER = Class.forName("android.os.IHwBinder");
+        } catch (Exception error) {
+            throw new ExceptionInInitializerError(error);
+        }
+    }
+    private static void transact(Object binder, int code, Object req, Object reply) throws Exception {
+        BINDER.getMethod("transact", int.class, PARCEL, PARCEL, int.class).invoke(binder, code, req, reply, 0);
+        PARCEL.getMethod("verifySuccess").invoke(reply);
+        PARCEL.getMethod("releaseTemporaryStorage").invoke(req);
+    }
+    private static Object getConfigBinder() throws Exception {
+        Object bsp = Class.forName("android.os.HwBinder").getMethod("getService", String.class, String.class)
+                .invoke(null, BSP_IFACE, "default");
+        Object req = PARCEL.getConstructor().newInstance();
+        Object reply = PARCEL.getConstructor().newInstance();
+        PARCEL.getMethod("writeInterfaceToken", String.class).invoke(req, BSP_IFACE);
+        try {
+            transact(bsp, 6, req, reply);
+            int status = (Integer) PARCEL.getMethod("readInt32").invoke(reply);
+            Object config = PARCEL.getMethod("readStrongBinder").invoke(reply);
             if (status != 0 || config == null) {
                 throw new RuntimeException("CreateConfigInterface failed status=" + status + " binder=" + config);
             }
             return config;
         } finally {
-            reply.release();
+            PARCEL.getMethod("release").invoke(reply);
         }
     }
 
     private static int setColorfulLed(int mode, int color) throws Exception {
-        IHwBinder config = getConfigBinder();
-        HwParcel req = new HwParcel();
-        HwParcel reply = new HwParcel();
-        req.writeInterfaceToken(CONFIG_IFACE);
-        req.writeInt32(mode);
-        req.writeInt32(color);
+        Object config = getConfigBinder();
+        Object req = PARCEL.getConstructor().newInstance();
+        Object reply = PARCEL.getConstructor().newInstance();
+        PARCEL.getMethod("writeInterfaceToken", String.class).invoke(req, CONFIG_IFACE);
+        PARCEL.getMethod("writeInt32", int.class).invoke(req, mode);
+        PARCEL.getMethod("writeInt32", int.class).invoke(req, color);
         try {
-            config.transact(2, req, reply, 0);
-            reply.verifySuccess();
-            req.releaseTemporaryStorage();
-            return reply.readInt32();
+            transact(config, 2, req, reply);
+            return (Integer) PARCEL.getMethod("readInt32").invoke(reply);
         } finally {
-            reply.release();
+            PARCEL.getMethod("release").invoke(reply);
         }
     }
 
@@ -105,5 +115,14 @@ public class ColorfulLedTool {
         }
         int ret = setColorfulLed(mode, color);
         System.out.println("SetColorfulLed mode=" + mode + " color=" + color + " ret=" + ret);
+        if (args.length == 4 && "raw".equals(cmd)) {
+            String path = args[3];
+            if (!path.matches("/sdcard/Download/Mimonitor_Toolbox/\\.led_action_[a-f0-9]+\\.txt")) {
+                throw new IllegalArgumentException("Invalid LED result path");
+            }
+            try (FileWriter writer = new FileWriter(path)) {
+                writer.write("mode=" + mode + "\ncolor=" + color + "\nreturn=" + ret + "\n__complete=1\n");
+            }
+        }
     }
 }

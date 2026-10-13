@@ -60,6 +60,7 @@ from .core import (
 )
 from .network_scan import enumerate_windows_adapter_addresses
 from .picture_modes import NATIVE_MODE_CHOICES
+from .osd_2025 import SOURCE_CHOICES, LIGHT_EFFECTS, LIGHT_COLORS, OSD_OPTIONS
 from .presets import BASELINE_PRESET_ID, find_preset, new_id, unique_name
 from .windows import list_windows_displays
 from .widgets import (
@@ -368,20 +369,13 @@ class PagesMixin:
         self.hdr_tone_mapping_card.layout().addWidget(self.hdr_tone_mapping_status)
         self._update_hdr_tone_mapping_visibility()
 
-        self._btn_section(layout, "动态清晰度", [
-            ("关", 0, lambda _: self._jni("g_video__vid_insert_black", 0, "picture_dynamic_definition", "动态清晰度: 关")),
-            ("低", 1, lambda _: self._jni("g_video__vid_insert_black", 1, "picture_dynamic_definition", "动态清晰度: 低")),
-            ("中", 2, lambda _: self._jni("g_video__vid_insert_black", 2, "picture_dynamic_definition", "动态清晰度: 中")),
-            ("高", 3, lambda _: self._jni("g_video__vid_insert_black", 3, "picture_dynamic_definition", "动态清晰度: 高")),
-        ], state_key="picture_dynamic_definition")
-
         self._btn_section(layout, "灰阶响应时间", [
             ("普通", 1, lambda _: self._jni("g_video__vid_od_response_time", 1, "picture_response_time", "响应时间: 普通")),
             ("快速", 2, lambda _: self._jni("g_video__vid_od_response_time", 2, "picture_response_time", "响应时间: 快速")),
             ("高速", 3, lambda _: self._jni("g_video__vid_od_response_time", 3, "picture_response_time", "响应时间: 高速")),
         ], state_key="picture_response_time")
 
-        self._btn_section(layout, "色域", [
+        self.color_space_card = self._btn_section(layout, "色域", [
             ("自动", 0, lambda _: self._jni("g_video__vid_gamut_mapping_mode", 0, "tv_picture_advanced_video_color_space", "色域: 自动", "tv_picture_video_color_space")),
             ("sRGB", 3, lambda _: self._jni("g_video__vid_gamut_mapping_mode", 3, "tv_picture_advanced_video_color_space", "色域: sRGB", "tv_picture_video_color_space")),
             ("DCI-P3", 6, lambda _: self._jni("g_video__vid_gamut_mapping_mode", 6, "tv_picture_advanced_video_color_space", "色域: DCI-P3", "tv_picture_video_color_space")),
@@ -389,6 +383,11 @@ class PagesMixin:
             ("BT2020", 5, lambda _: self._jni("g_video__vid_gamut_mapping_mode", 5, "tv_picture_advanced_video_color_space", "色域: BT2020", "tv_picture_video_color_space")),
             ("BT709", 7, lambda _: self._jni("g_video__vid_gamut_mapping_mode", 7, "tv_picture_advanced_video_color_space", "色域: BT709", "tv_picture_video_color_space")),
         ], state_key="tv_picture_advanced_video_color_space")
+
+        self.color_range_card = self._btn_section(layout, "色彩动态范围", [
+            (name, value, lambda _, v=value, n=name: self._set_osd_option("color_range", v, n))
+            for value, name in OSD_OPTIONS["color_range"]
+        ], state_key="tv_picture_video_hdmi_rgb_range")
 
         scroll.setWidget(container)
         return scroll
@@ -425,24 +424,10 @@ class PagesMixin:
         # Game Switches
         self._btn_section(layout, "准星", [("关", 0, lambda _: self._fs(0))]+[(str(i), i, lambda _, v=i: self._fs(v)) for i in range(1,6)], state_key="front_sight_index")
         
-        self._btn_section(layout, "动态准星", [
-            ("关", 0, lambda _: self._set_game_feature("mt_game_dynamic_ft", 0, "动态准星: 关")),
-            ("开", 1, lambda _: self._set_game_feature("mt_game_dynamic_ft", 1, "动态准星: 开")),
-        ], state_key="mt_game_dynamic_ft")
-
-        self._btn_section(layout, "狙击镜", [
-            ("关", 0, lambda _: self._set_game_feature("mt_game_scope", 0, "狙击镜: 关")),
-            ("1.1x", 1, lambda _: self._set_game_feature("mt_game_scope", 1, "狙击镜: 1.1x")),
-            ("1.3x", 3, lambda _: self._set_game_feature("mt_game_scope", 3, "狙击镜: 1.3x")),
-            ("1.5x", 5, lambda _: self._set_game_feature("mt_game_scope", 5, "狙击镜: 1.5x")),
-            ("1.7x", 7, lambda _: self._set_game_feature("mt_game_scope", 7, "狙击镜: 1.7x")),
-            ("2.0x", 10, lambda _: self._set_game_feature("mt_game_scope", 10, "狙击镜: 2.0x")),
-        ], state_key="mt_game_scope")
-
-        self._btn_section(layout, "狙击镜夜视", [
-            ("关", 0, lambda _: self._set_game_feature("mt_game_scope_night", 0, "狙击镜夜视: 关")),
-            ("开", 1, lambda _: self._set_game_feature("mt_game_scope_night", 1, "狙击镜夜视: 开")),
-        ], state_key="mt_game_scope_night")
+        self.dark_enhancement_card = self._btn_section(layout, "暗区增强", [
+            (name, value, lambda _, v=value, n=name: self._set_osd_option("dark_enhancement", v, n))
+            for value, name in OSD_OPTIONS["dark_enhancement"]
+        ], state_key="osd_dark_enhancement")
 
         self._btn_section(layout, "320Hz竞技模式", [
             ("关", 0, lambda _: self._320(False)),
@@ -454,24 +439,18 @@ class PagesMixin:
             ("开", 1, lambda _: self._fsync(True)),
         ], state_key="freesync")
 
-        self._btn_section(layout, "FPS计数器", [
-            ("关", 0, lambda _: self._set("monitor_menu_fps_counter", 0, "FPS: 关")),
-            ("刷新率", 1, lambda _: self._set("monitor_menu_fps_counter", 1, "FPS: 刷新率")),
-            ("柱状图", 2, lambda _: self._set("monitor_menu_fps_counter", 2, "FPS: 柱状图")),
-        ], state_key="monitor_menu_fps_counter")
-
-        self._btn_section(layout, "秒表", [
-            ("关", 0, lambda _: self._set("monitor_menu_stopwatch", 0, "秒表: 关")),
-            ("开", 1, lambda _: self._set("monitor_menu_stopwatch", 1, "秒表: 开")),
-        ], state_key="monitor_menu_stopwatch")
-
-        self._btn_section(layout, "定时器", [
-            ("关", 0, lambda _: self._set("monitor_menu_timer", 0, "定时器: 关")),
-            ("1分钟", 60, lambda _: self._set("monitor_menu_timer", 60, "定时器: 1分钟")),
-            ("5分钟", 300, lambda _: self._set("monitor_menu_timer", 300, "定时器: 5分钟")),
-            ("30分钟", 1800, lambda _: self._set("monitor_menu_timer", 1800, "定时器: 30分钟")),
-            ("60分钟", 3600, lambda _: self._set("monitor_menu_timer", 3600, "定时器: 60分钟")),
-        ], state_key="monitor_menu_timer")
+        self.eye_protection_card = self._btn_section(layout, "低蓝光护眼模式", [
+            (name, value, lambda _: None)
+            for value, name in OSD_OPTIONS["eye_protection"]
+        ], state_key="osd_eye_protection")
+        eye_hint = BodyLabel("护眼开关会重载白平衡，目前仅显示状态，以保留校色配置。", container)
+        eye_hint.setWordWrap(True)
+        layout.addWidget(eye_hint)
+        self._btn_section(layout, "帧率显示", [
+            ("关", 0, lambda _: self._set_frame_display(0)),
+            ("开", 1, lambda _: self._set_frame_display(1)),
+        ], state_key="key_free_sync_frame_enable")
+        self._update_osd_availability()
 
         scroll.setWidget(container)
         return scroll
@@ -505,7 +484,7 @@ class PagesMixin:
         if "mitv.tvplayer.hdmi.last.source" not in self.state_buttons:
             self.state_buttons["mitv.tvplayer.hdmi.last.source"] = {}
 
-        for v, n in [(23, "HDMI 1"), (24, "HDMI 2"), (29, "DP"), (30, "USBC")]:
+        for v, n in SOURCE_CHOICES:
             b = ToggleButton(n, card)
             b.setCheckable(True)
             b.setFixedSize(120, 45)
@@ -558,29 +537,25 @@ class PagesMixin:
         title_row.addWidget(refresh_light_btn)
         layout.addLayout(title_row)
 
-        self._btn_section(layout, "炫彩灯模式", [
-            ("关闭", 4, lambda _: self._set_screen_light_mode(4, "关闭")),
-            ("照明", 0, lambda _: self._set_screen_light_mode(0, "照明")),
-            ("纯色", 2, lambda _: self._set_screen_light_mode(2, "纯色")),
-            ("屏幕同色", 1, lambda _: self._set_screen_light_mode(1, "屏幕同色")),
-            ("七彩梦境（循环）", 3, lambda _: self._set_screen_light_mode(3, "七彩梦境（循环）")),
-        ], state_key="atmosphere_light_switcher_pm2")
-
-        self._add_light_slider(layout, "亮度挡位", "atmosphere_illumination", 1, 15, 10)
-
-        self._btn_section(layout, "照明色温", [
-            ("2700K", 0, lambda _: self._set_screen_light_color_temp(0, "2700K")),
-            ("4000K", 1, lambda _: self._set_screen_light_color_temp(1, "4000K")),
-            ("6500K", 2, lambda _: self._set_screen_light_color_temp(2, "6500K")),
-        ], state_key="atmosphere_light_color_temp")
-
-        self._btn_section(layout, "纯色颜色", [
-            ("冰蓝", 0, lambda _: self._set_screen_light_color_value(0, "冰蓝")),
-            ("流金", 1, lambda _: self._set_screen_light_color_value(1, "流金")),
-            ("天青", 2, lambda _: self._set_screen_light_color_value(2, "天青")),
-            ("草地", 3, lambda _: self._set_screen_light_color_value(3, "草地")),
-            ("日落", 4, lambda _: self._set_screen_light_color_value(4, "日落")),
-        ], state_key="atmosphere_light_color_value")
+        self._btn_section(layout, "灯光", [
+            ("关", 0, lambda _: self._set_monitor_light("atmosphere_light_switcher", 0, "灯光: 关")),
+            ("开", 1, lambda _: self._set_monitor_light("atmosphere_light_switcher", 1, "灯光: 开")),
+        ], state_key="atmosphere_light_switcher")
+        self._btn_section(layout, "光效", [
+            (name, value, lambda _, v=value, n=name: self._set_monitor_light("atmosphere_light_effect", v, "光效: " + n))
+            for value, name in LIGHT_EFFECTS
+        ], state_key="atmosphere_light_effect")
+        # Two rows keep all twelve colors within the default window width.
+        for choices in (LIGHT_COLORS[:6], LIGHT_COLORS[6:]):
+            self._btn_section(layout, "预设颜色", [
+                (name, value, lambda _, v=value, n=name: self._set_monitor_light("atmosphere_light_preset_color", v, "预设颜色: " + n))
+                for value, name in choices
+            ], state_key="atmosphere_light_preset_color")
+        self._btn_section(layout, "屏幕同色", [
+            ("关", 0, lambda _: self._set_monitor_light("atmosphere_light_same_color", 0, "屏幕同色: 关")),
+            ("开", 1, lambda _: self._set_monitor_light("atmosphere_light_same_color", 1, "屏幕同色: 开")),
+        ], state_key="atmosphere_light_same_color")
+        self._update_monitor_light_controls()
 
         scroll.setWidget(container)
         return scroll
@@ -1854,6 +1829,9 @@ class PagesMixin:
             
             btn.clicked.connect(lambda checked=False, k=key: self._key(k))
             row_menu.addWidget(btn)
+        osd_btn = PushButton("显示器 OSD", remote_card)
+        osd_btn.clicked.connect(self._open_monitor_osd)
+        row_menu.addWidget(osd_btn)
             
         rc_layout.addLayout(row_menu)
 
@@ -2045,35 +2023,6 @@ class PagesMixin:
         parent_layout.addWidget(card)
         self.color_gain_cards.append(card)
         card.setVisible(False)
-
-    def _add_light_slider(self, parent_layout, title, name, lo, hi, default):
-        card = SimpleCardWidget(self)
-        layout = QHBoxLayout(card)
-        layout.setContentsMargins(15, 10, 15, 10)
-
-        name_label = BodyLabel(title, card)
-        name_label.setFixedWidth(100)
-        layout.addWidget(name_label)
-
-        slider = PageScrollSlider(Qt.Orientation.Horizontal, card)
-        slider.setRange(lo, hi)
-        slider.setValue(default)
-        layout.addWidget(slider)
-
-        val_label = BodyLabel(str(default), card)
-        val_label.setFixedWidth(40)
-        val_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(val_label)
-
-        slider.valueChanged.connect(lambda v: val_label.setText(str(v)))
-        self.sliders[name] = (slider, val_label)
-
-        _debounce_timer = QTimer(card)
-        _debounce_timer.setSingleShot(True)
-        _debounce_timer.setInterval(300)
-        _debounce_timer.timeout.connect(lambda: self._set_screen_light_illumination(slider.value()))
-        slider.valueChanged.connect(lambda v: _debounce_timer.start())
-        parent_layout.addWidget(card)
 
     def _btn_section(self, parent_layout, title, buttons, state_key=None):
         card = SimpleCardWidget(self)

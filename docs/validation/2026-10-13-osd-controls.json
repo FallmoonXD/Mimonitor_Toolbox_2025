@@ -1,0 +1,102 @@
+{
+  "device": "Redmi G Pro 27U 2025 / beekeeper",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "date": "2026-10-13",
+  "osd_verified_live": true,
+  "settings_apk_sha256": "a987b8d3c65989c5154dcba1fc3247a7c05af2ca6441e29ac2bb03151a9c58f1",
+  "configuration_queries": {
+    "support_pm2_monitor": "NULL",
+    "support_port_usb_c": "NULL",
+    "support_dynamic_defination": "NULL"
+  },
+  "dark_enhancement": {
+    "native_mode": 13,
+    "values": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "native_returns": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "packed_readbacks": [
+      0,
+      256,
+      512,
+      768
+    ],
+    "unrelated_changes": {}
+  },
+  "color_range": {
+    "source": 23,
+    "native_mode": 10,
+    "values": [
+      0,
+      1,
+      2
+    ],
+    "native_returns": [
+      0,
+      0,
+      0
+    ],
+    "unrelated_changes": {},
+    "Dolby_write_rejected": true
+  },
+  "eye_protection": {
+    "status_only": true,
+    "write_api_blocked": true,
+    "observed_side_effects": [
+      "color_temperature_switch",
+      "custom_RGB_gains_reload"
+    ],
+    "live_settings_restored": true
+  },
+  "frame_display": {
+    "on_off_verified": true,
+    "visible_value": "160"
+  },
+  "lights": {
+    "effects_tested": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "solid_colors_tested": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "switch_and_screen_color_tested": true,
+    "driver_returns_confirmed": true,
+    "OSD_settings_verified": true,
+    "original_light_effect_restored": true,
+    "optical_validation": false
+  },
+  "restoration": {
+    "native_calibration_fields": 50,
+    "picture_database_fields": 112,
+    "additional_native_fields": 4,
+    "windows_target": "XMI27B3",
+    "windows_HDR": true,
+    "Dolby_native_mode": 13,
+    "dovi_flag": 1,
+    "unrelated_native_changes": {},
+    "picture_database_changes": {}
+  },
+  "offline_tests_passed": 477
+}

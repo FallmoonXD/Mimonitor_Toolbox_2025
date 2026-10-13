@@ -51,6 +51,10 @@ class FakeAdb:
         self._record("hdr_tone_mapping", val, upd, check)
         self.tone = val
 
+    def osd_option(self, option, value):
+        self._record("osd_option", option, value)
+        return {"warnings": []}
+
     def check_and_heal_jar(self):
         self._record("check_and_heal_jar")
 
@@ -80,6 +84,9 @@ def full_values(mode=14, color_temp=1, light_sensor=0, freesync=0):
         "picture_response_time": 3,
         "tv_picture_advanced_video_color_space": 6,
         "tv_picture_video_color_space": 6,
+        "picture_gamma_mode": 0,
+        "tv_picture_video_hdmi_rgb_range": 0,
+        "mitv.tvplayer.hdmi.last.source": 23,
     }
 
 
@@ -134,9 +141,9 @@ class WriteOrderTests(unittest.TestCase):
 
         adb = FakeAdb()
         result = presets.apply_preset(adb, full_values(mode=15, color_temp=3))
-        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS))
+        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS) - 2)
         self.assertEqual(result.failed, [])
-        self.assertEqual(result.skipped, [])
+        self.assertEqual([name for name, _ in result.skipped], ["动态清晰度", "暗区增强"])
 
     def test_conditional_items_are_skipped_not_failed(self):
         """默认（标准模式 + 非自定义色温）下应恰好跳过两个条件项，且不算失败。"""
@@ -145,9 +152,9 @@ class WriteOrderTests(unittest.TestCase):
         adb = FakeAdb()
         result = presets.apply_preset(adb, full_values())
         self.assertEqual(sorted(name for name, _ in result.skipped),
-                         ["HDR 色调映射", "色增益"])
+                         ["HDR 色调映射", "动态清晰度", "暗区增强", "色增益"])
         self.assertEqual(result.failed, [])
-        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS) - 2)
+        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS) - 4)
 
 
 class ItemWriteSequenceTests(unittest.TestCase):

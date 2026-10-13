@@ -198,8 +198,9 @@ public class MtkDirectTool {
 
         String cmd = args[0];
         if (cmd.equals("setColorGainsChecked") || cmd.equals("setHdrToneMappingChecked")
-                || cmd.equals("setPictureModeChecked") || cmd.equals("getPictureState")) {
-            int required = cmd.equals("setColorGainsChecked") ? 6 : 5;
+                || cmd.equals("setPictureModeChecked") || cmd.equals("setOsdOptionChecked")
+                || cmd.equals("getPictureState")) {
+            int required = cmd.equals("setColorGainsChecked") || cmd.equals("setOsdOptionChecked") ? 6 : 5;
             if (cmd.equals("getPictureState")) required = 2;
             if (args.length != required) throw new IllegalArgumentException("Invalid checked action arguments");
             checkedResultFile = args[args.length - 1];
@@ -244,7 +245,23 @@ public class MtkDirectTool {
                     "getMinMaxConfigValue_native", int.class, String.class);
             getMinMaxNative.setAccessible(true);
 
-            if ("setPictureMode".equals(cmd)) {
+            if ("setOsdOption".equals(cmd)) {
+                int value = Integer.parseInt(args[2]);
+                if (checkedResultFile == null || bankBefore == null || doviBefore == null
+                        || signalFamily(bankBefore, doviBefore) < 0) {
+                    throw new IllegalStateException("OSD option requires a confirmed input and checked result");
+                }
+                boolean valid = "g_video__vid_gamma_mode".equals(key)
+                        ? value >= 0 && ((value >> 8) & 255) <= 3
+                        : "g_fusion_picture__hdmi_rgb_range".equals(key)
+                        ? value >= 0 && value <= 2
+                        : "g_video__clr_eye_protection_mode".equals(key) && (value == 0 || value == 1);
+                if (!valid) throw new IllegalArgumentException("Invalid OSD option");
+                int result = (Integer) setConfigValueNative.invoke(null, -1, key, value, 3);
+                receipt("native_return", result);
+                if (result != 0) throw new IllegalStateException("Native OSD write failed: " + result);
+                readCheckedValues(classLoader, key);
+            } else if ("setPictureMode".equals(cmd)) {
                 setPictureMode(classLoader, setConfigValueNative, Integer.parseInt(args[1]), Integer.parseInt(args[2]));
             } else if ("get".equals(cmd)) {
                 if (key == null) {

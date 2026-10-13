@@ -45,3 +45,12 @@ numbers: native Dolby game is 13 and Dolby custom is 61. After a verified native
 mode write, Python synchronizes `picture_mode` and, for Dolby, `picture_mode_dolby`,
 then verifies the final native state. Unavailable native signal state disables
 mode writes. Unknown tone values retain their raw value and clear the old highlight.
+
+`setOsdOptionChecked <key> <value> <update> <expected-bank> <result-file>`
+adds checked 2025 OSD writes using the same unique receipt protocol. Python
+validates the option, current signal and HDMI/game restrictions before writing.
+Dark enhancement changes only bits 8–15 of `g_video__vid_gamma_mode`, preserving
+the gamma byte and other bits; HDMI range uses `g_fusion_picture__hdmi_rgb_range`.
+Python mirrors settings only after native verification and checks the final state.
+The desktop API rejects eye-protection writes: hardware testing found they switch
+color temperature and reload custom white balance. The UI displays its state only.
