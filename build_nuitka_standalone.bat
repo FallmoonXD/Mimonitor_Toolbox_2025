@@ -1,8 +1,12 @@
 @echo off
 rem Nuitka standalone 打包（文件夹形态，启动最快，zip 整个 dist 目录分发）。
 rem 需要 python.org 安装的 Python（Microsoft Store 版缺少链接库，无法编译）。
-set PY=%LOCALAPPDATA%\Programs\Python\Python313\python.exe
-if not exist "%PY%" set PY=python
+cd /d "%~dp0"
+set "PY=%~dp0.venv\Scripts\python.exe"
+if not exist "%PY%" (
+  python -m venv "%~dp0.venv"
+  if errorlevel 1 exit /b 1
+)
 "%PY%" -m pip install -r requirements-build.txt
 "%PY%" -m nuitka ^
   --standalone ^

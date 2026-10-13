@@ -35,7 +35,11 @@ Java 回执用例使用模拟 native/Provider 接口，编译并执行实际 hel
 | `build_nuitka_standalone.bat` | `dist-nuitka-standalone/monitor_controller.dist/MonitorToolbox2025.exe` |
 | `build_installer.bat` | `dist-installer/MonitorToolbox2025-portable.zip` 和 `MonitorToolbox2025-Setup.exe` |
 
-脚本优先使用本机 Python 3.13 的安装路径，找不到时使用 PATH 中的 `python`。使用上述虚拟环境时，可先在当前终端将 `.venv\Scripts` 加到 PATH；若机器存在脚本指定的 Python 3.13，需同时确认其已安装项目依赖。
+构建脚本使用项目内的 `.venv\Scripts\python.exe`；没有虚拟环境时，用 PATH 中的 `python` 创建它，再安装项目依赖。打包脚本在独立临时目录中生成便携包，完成后清理临时目录。
+
+## 本机工作区
+
+本机项目集中在 `F:\Chatgpt\test\Redmi_G_Pro_27U_2025`，源码、Git 历史、构建入口和开发环境都在此目录。安装验证记录与只读实机检查脚本放在 `.local/`，不提交个人数据。旧版程序备份、旧仓库和临时发布目录已清理；正式校色档案仍在原档案库。
 
 GitHub Actions 在 `main` 推送或 PR 时执行测试；只有 `v2025-*` 标签触发发布构建。创建发布标签前应完成对应版本的实机与安装包验收。
 
