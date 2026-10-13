@@ -115,7 +115,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
         self._connection_in_progress = False
 
         # Window properties
-        self.setWindowTitle("红米 G Pro 27U Toolbox")
+        self.setWindowTitle("红米 G Pro 27U 2025 Toolbox")
         self.resize(1000, 750)
 
         # Connect signals
@@ -193,7 +193,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
 
         self.tray_icon.setIcon(icon)
         self.setWindowIcon(icon)
-        self.tray_icon.setToolTip("红米 G Pro 27U Toolbox")
+        self.tray_icon.setToolTip("红米 G Pro 27U 2025 Toolbox")
 
         # 不调用 setContextMenu：那样右键会被 Qt 直接接管、activated 收不到
         # Context，也无法在每次弹出前重建菜单（打勾需要反映最新值）。
@@ -598,7 +598,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
                     event.ignore()
                     self.hide()
                     self.tray_icon.showMessage(
-                        "红米 G Pro 27U Toolbox",
+                        "红米 G Pro 27U 2025 Toolbox",
                         "程序已最小化到系统托盘。双击托盘图标可重新打开，您也可以在 [工具与设置] 页面更改设置。",
                         QSystemTrayIcon.MessageIcon.Information,
                         3000
@@ -634,7 +634,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
                 os.makedirs(os.path.dirname(adb_runtime._log_path), exist_ok=True)
                 adb_runtime._log_file = open(adb_runtime._log_path, "a", encoding="utf-8")
                 adb_runtime._log_file.write(f"{'='*60}\n")
-                adb_runtime._log_file.write(f"红米 G Pro 27U Toolbox 日志 - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                adb_runtime._log_file.write(f"红米 G Pro 27U 2025 Toolbox 日志 - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
                 adb_runtime._log_file.write(f"{'='*60}\n")
                 adb_runtime._log_file.flush()
             except OSError as e:
@@ -811,7 +811,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
             status_suffix = text
             self.status_label.setStyleSheet("color: #107c41; font-weight: bold; font-size: 14px;")
             
-        self.setWindowTitle(f"红米 G Pro 27U Toolbox - {status_suffix}")
+        self.setWindowTitle(f"红米 G Pro 27U 2025 Toolbox - {status_suffix}")
 
     def _show_message_box(self, mtype, title, text):
         w = MessageBox(title, text, self)

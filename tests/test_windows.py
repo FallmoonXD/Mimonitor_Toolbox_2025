@@ -162,9 +162,27 @@ class WindowsRuntimeTests(unittest.TestCase):
             os.path.join(
                 roaming,
                 r"Microsoft\Windows\Start Menu\Programs\Startup",
-                "RedmiToolbox.bat",
+                "RedmiToolbox2025.bat",
             ),
         )
+
+    def test_removing_2025_autostart_preserves_official_autostart(self):
+        import tempfile
+        from pathlib import Path
+        from mimonitor_toolbox import windows
+
+        with tempfile.TemporaryDirectory() as folder, mock.patch.dict(
+            os.environ, {"APPDATA": folder}, clear=False
+        ):
+            startup = Path(windows.get_autostart_path()).parent
+            startup.mkdir(parents=True)
+            official = startup / "RedmiToolbox.bat"
+            original = b'official autostart\n'
+            official.write_bytes(original)
+            self.assertTrue(windows.install_autostart("C:/test/MonitorToolbox2025.exe"))
+            self.assertTrue(windows.remove_autostart())
+            self.assertFalse(Path(windows.get_autostart_path()).exists())
+            self.assertEqual(official.read_bytes(), original)
 
     def test_power_broadcast_uses_automatic_resume_as_the_single_trigger(self):
         from mimonitor_toolbox import windows

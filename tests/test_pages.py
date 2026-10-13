@@ -501,7 +501,7 @@ class CountdownSettingsUiTests(TrayTestBase):
         base.assert_called_once()
 
     def test_hdr_source_tooltip_describes_vendor_matching_without_a_year(self):
-        """文案不该出现年份/机型：软件是给 2026 用的，识别依据只是 EDID 厂商码。"""
+        """目标识别选项保持简短，检测逻辑仍按 EDID 厂商码匹配。"""
         tooltip = self.window.hdr_target_combo.toolTip()
         self.assertIn("XMI", tooltip)
         self.assertNotIn("2025", tooltip)

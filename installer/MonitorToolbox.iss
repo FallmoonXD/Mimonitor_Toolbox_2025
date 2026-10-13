@@ -6,19 +6,19 @@
 #define MyAppVersion "0.0.0-dev"
 #endif
 
-#define MyAppName "红米 G Pro 27U Toolbox"
-#define MyAppExeName "MonitorToolbox.exe"
+#define MyAppName "红米 G Pro 27U 2025 Toolbox"
+#define MyAppExeName "MonitorToolbox2025.exe"
 
 [Setup]
-AppId={{ABB559AF-03B2-4BA3-B1CD-8595E7E4A9F0}
+AppId={{458301FA-5E7A-48F9-8DAB-405FF76F8103}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppPublisher=Mimonitor Toolbox
-DefaultDirName={autopf}\MonitorToolbox
+AppPublisher=FallmoonXD (based on YiHoooong/Mimonitor_Toolbox)
+DefaultDirName={autopf}\MonitorToolbox2025
 DefaultGroupName={#MyAppName}
 UninstallDisplayName={#MyAppName}
 OutputDir=..\dist-installer
-OutputBaseFilename=MonitorToolbox-Setup
+OutputBaseFilename=MonitorToolbox2025-Setup
 SetupIconFile=..\assets\app\icon.ico
 Compression=lzma2/max
 SolidCompression=yes

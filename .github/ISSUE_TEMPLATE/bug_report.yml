@@ -23,7 +23,7 @@ body:
     attributes:
       label: 应用版本
       description: 可填写版本号、Release 名称或提交号。
-      placeholder: 例如 v2.8.6
+      placeholder: 例如 v2025-0.1.0
     validations:
       required: true
   - type: input
@@ -38,7 +38,7 @@ body:
     attributes:
       label: 显示器型号与固件版本
       description: 可选。设备相关问题请尽量填写；纯界面问题可留空。
-      placeholder: 例如 Redmi G Pro 27U 2026 / HyperOS 3.0.x
+      placeholder: 例如 Redmi G Pro 27U 2025 / OS3.0.109.0.UFFMAMN
   - type: textarea
     id: actual-behavior
     attributes:

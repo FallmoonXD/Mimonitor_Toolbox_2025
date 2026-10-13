@@ -17,7 +17,7 @@ if not exist "%PY%" set PY=python
   --include-data-files=assets/runtime/MtkDirectTool.jar=assets/runtime/MtkDirectTool.jar ^
   --include-data-files=assets/runtime/ColorfulLedTool.jar=assets/runtime/ColorfulLedTool.jar ^
   --include-data-files=assets/adb_guardian/adbguardian-signed.apk=assets/adb_guardian/adbguardian-signed.apk ^
-  --output-filename=MonitorToolbox.exe ^
+  --output-filename=MonitorToolbox2025.exe ^
   --output-dir=dist-nuitka-standalone ^
   --assume-yes-for-downloads ^
   monitor_controller.py

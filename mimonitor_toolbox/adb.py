@@ -80,7 +80,7 @@ def get_adb_path():
 
 
 ADB = get_adb_path()
-ADB_SERVER_PORT = os.environ.get("MIMONITOR_ADB_SERVER_PORT", "5038")
+ADB_SERVER_PORT = os.environ.get("MIMONITOR_ADB_SERVER_PORT", "5039")
 ADB_DEVICE_PORT = 5555
 ADB_DISCONNECTED_MARKERS = (
     "offline", "unauthorized", "no devices", "not found",

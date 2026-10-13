@@ -133,7 +133,7 @@ class PagesMixin:
         layout.setSpacing(20)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        title = TitleLabel("红米 G Pro 27U Toolbox", container)
+        title = TitleLabel("红米 G Pro 27U 2025 Toolbox", container)
         title_font = title.font()
         title_font.setPixelSize(28)
         title_font.setBold(True)
@@ -1721,7 +1721,7 @@ class PagesMixin:
             self.log("全局快捷键保存并重新注册成功！")
             
             self.tray_icon.showMessage(
-                "红米 G Pro 27U Toolbox",
+                "红米 G Pro 27U 2025 Toolbox",
                 "全局快捷键已保存并重新应用！",
                 QSystemTrayIcon.MessageIcon.Information,
                 2000
@@ -1733,7 +1733,7 @@ class PagesMixin:
         layout.addLayout(grid)
 
         github_link = BodyLabel(container)
-        github_link.setText('仓库地址：<a href="https://github.com/YiHoooong/Mimonitor_Toolbox" style="color: #734EFF;">https://github.com/YiHoooong/Mimonitor_Toolbox</a>')
+        github_link.setText('仓库地址：<a href="https://github.com/FallmoonXD/Mimonitor_Toolbox_2025" style="color: #734EFF;">2025 款维护仓库</a> · 上游：<a href="https://github.com/YiHoooong/Mimonitor_Toolbox" style="color: #734EFF;">YiHoooong/Mimonitor_Toolbox</a>')
         github_link.setOpenExternalLinks(True)
         github_link.setAlignment(Qt.AlignmentFlag.AlignCenter)
 

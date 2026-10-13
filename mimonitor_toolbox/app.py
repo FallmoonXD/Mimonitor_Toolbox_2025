@@ -14,7 +14,7 @@ from .core import cleanup_stale_extract_dirs, get_app_data_dir, load_settings
 from .main_window import App
 
 
-SERVER_NAME = "mitv_gpro27u_controller_single_instance"
+SERVER_NAME = "mitv_gpro27u_2025_controller_single_instance"
 
 
 def _install_excepthook():

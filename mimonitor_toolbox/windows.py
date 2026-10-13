@@ -333,7 +333,7 @@ def get_autostart_path():
         os.environ.get("APPDATA", ""),
         r"Microsoft\Windows\Start Menu\Programs\Startup",
     )
-    return os.path.join(startup, "RedmiToolbox.bat")
+    return os.path.join(startup, "RedmiToolbox2025.bat")
 
 
 def get_executable_path():

@@ -15,7 +15,7 @@ def get_app_data_dir():
         base = os.environ.get("LOCALAPPDATA", os.environ.get("USERPROFILE", os.path.expanduser("~")))
     else:
         base = os.path.expanduser("~")
-    folder = os.path.join(base, ".gpro_controller")
+    folder = os.path.join(base, ".gpro_controller_2025")
     os.makedirs(folder, exist_ok=True)
     return folder
 

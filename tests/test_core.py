@@ -35,6 +35,23 @@ class CoreSettingsTests(unittest.TestCase):
         self.assertEqual(settings["saved_ip"], "192.168.1.8")
         self.assertEqual(settings["close_behavior"], "exit")
 
+    def test_default_settings_do_not_read_or_overwrite_official_config(self):
+        from mimonitor_toolbox import core
+
+        official = Path(self.temp_dir.name) / ".gpro_controller" / "config.json"
+        official.parent.mkdir()
+        original = b'{"saved_ip":"official-device", "active_preset_id":"official"}'
+        official.write_bytes(original)
+        with mock.patch.object(core.sys, "platform", "win32"), mock.patch.dict(
+            core.os.environ,
+            {"LOCALAPPDATA": self.temp_dir.name, "MIMONITOR_SETTINGS_PATH": ""},
+        ):
+            self.assertEqual(core.load_settings()["saved_ip"], "")
+            self.assertTrue(core.update_settings({"saved_ip": "test-device"}))
+            self.assertEqual(core.load_settings()["saved_ip"], "test-device")
+            self.assertNotEqual(Path(core.get_settings_path()), official)
+        self.assertEqual(official.read_bytes(), original)
+
     def test_missing_active_preset_falls_back_to_baseline(self):
         from mimonitor_toolbox import core
 

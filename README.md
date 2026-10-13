@@ -1,191 +1,87 @@
-# Mimonitor Toolbox
+# Mimonitor Toolbox 2025
 
-Redmi G Pro 27U 2026显示器 ADB 控制工具
-测试机器系统版本号：HyperOS 3.0.112.0  
-不确定小米是否后续会对该行为进行阻止 且用且珍惜吧 尚不知2025是否可用  
-摸索了很久 有点地方写的也不怎么样 有问题欢迎issue  
-如果觉得本项目对你有帮助，欢迎点亮一颗 ⭐ (Star) 支持一下！或者，您也可以通过赞助 Sponsor 请我喝杯快乐水。开源不易，感谢认可！🙌  
+红米 G Pro 27U **2025 款**的 Windows ADB 控制工具维护仓库。
 
-<img src="assets/e41e5c8458c34a6e2f7c46b92be05381.png" width="300"> <img src="assets/116be2f82c8a3f88e57f95cf4f11c0a9.jpg" width="300">
+基于 [YiHoooong/Mimonitor_Toolbox](https://github.com/YiHoooong/Mimonitor_Toolbox) 的官方 v2.9.0，保留原作者代码、资源与提交历史。原作者的控制工具、界面和设备通信实现是本项目的基础；2025 款兼容修复由本仓库维护。上游原始说明保存在 [README.upstream.md](README.upstream.md)。
 
-## 软件截图
+## 当前范围
 
-<img src="assets/Screensettings.png" width="500">
-<img src="assets/Gamesettings.png" width="500">
+| 项目 | 本仓库验证目标 |
+| --- | --- |
+| 显示器 | 红米 G Pro 27U 2025，Windows EDID `XMI27B3` |
+| Android 身份 | `MiTV-MFFU1` / `beekeeper` |
+| 实机固件 | Android 14 / `OS3.0.109.0.UFFMAMN` |
+| 桌面平台 | Windows 11 |
+| 当前阶段 | 源码开发与兼容验证，尚未发布独立安装包 |
 
-## macOS 版
+维护者只有 2025 款设备。本仓库的实机结论限于上述型号和固件；2026 款、其他固件和继承的 macOS 移植均未在此维护分支完成实机验收。
 
-`macos/` 下有一份**原生 SwiftUI 移植**，功能与原版对齐，另外多了些 macOS 独有的能力：
+## 2025 款兼容改动
 
-```bash
-cd macos
-./build_app.sh          # 打包成自包含的 .app + 拖动安装的 .dmg（Intel + Apple Silicon 通用）
-open "红米G Pro ToolBox.app"
-```
+- 当前场景优先采用原生画面 bank 和 Dolby 标志，避免数据库旧值导致错误场景显示。
+- RGB gain 优先显示当前 bank 的 native 回读，避免 factory 白平衡 getter 与当前状态不一致。
+- 未知 HDR 色调映射值保留原始信息，并清除旧选项高亮。
+- RGB 与 HDR tone 的 checked 写入分别检查 native 返回码、原生回读和 Provider 结果；Provider 异常作为独立警告显示。
+- 捕获到原生场景时，checked setter 检查目标 bank 和写入期间 bank 变化；预设无法确认目标 bank 时停止后续画质参数写入。
 
-- **拖动安装**：`.dmg` 挂载后把 app 拖进 Applications 即完成，和常见 macOS 软件一样
-- **菜单栏常驻**：顶栏图标下拉即可快捷调节（画面模式 / 精密控光 / 背光…，可自定义）；关掉主窗口后 Dock 图标自动收起，只留菜单栏
-- **全局快捷键**：自带悬浮提示与可调倒计时
-- **无需任何依赖**：adb 会自动下载并内嵌进 .app，最终用户双击即用
-- 自动适配深色 / 浅色模式
+这些改动来自 [上游草稿 PR #19](https://github.com/YiHoooong/Mimonitor_Toolbox/pull/19)。后续在本仓库验证和维护，无需以 2026 款实机验证作为本仓库的发布前提。
 
-详情与构建说明见 [`macos/README.md`](macos/README.md)。
+### 验证进度
 
-## 实现原理
+2026-10-13 的只读 ADB 验证确认：
 
-通过无线 ADB 连接到显示器内置的 Android 系统，利用 `settings` 命令和 MTK 平台 JNI 接口（`MtkDirectTool.jar`）直接读写硬件寄存器，实现对显示器各项参数的精确控制。
+- 原生 bank `13`、Dolby 标志 `1`；原生 RGB `1022/1008/942`。
+- 两次读取的 **49 个 native 字段、112 个画质数据库字段前后一致**，PC 工具箱配置哈希不变。
+- 把实机快照送入断开设备的修改后 UI，显示「Dolby Vision 自定义」及正确 RGB。
+- 兼容修复提交的 443 项 Python/Java 测试通过，包含 native/Provider 模拟接口的实际 Java 回执执行。
+- 拆分为独立仓库后，完整 445 项测试通过；新增检查确认官方配置与启动项不会被维护版覆盖或移除。
 
-### 通信架构
+本轮没有在校色设备执行画质 setter、切换 HDR/输入/场景或扫描 20 点白平衡整表。checked 写入和跨模式预设的实机验收仍待完成。详见 [2025 款兼容与验证记录](docs/2025-compatibility.md)。
 
-```
-PC (MonitorToolbox.exe)
-  │
-  ├─ ADB Wireless ──► 显示器 Android 系统 (port 5555)
-  │
-  ├─ settings get/put ──► 读写 Android Global Settings
-  │   (picture_mode, picture_backlight, picture_contrast, ...)
-  │
-  └─ MtkDirectTool.jar ──► MTK JNI 直写硬件寄存器
-      (背光 g_disp__disp_back_light)
-      (色温 g_video__clr_temp)
-      (色域 g_video__vid_gamut_mapping_mode)
-      (精密控光 g_video__vid_local_dimming)
-      (320Hz g_fusion_picture__hdmi_edid_version)
-      (FreeSync g_video__freesync_switch)
-      (恢复默认 g_fusion_picture__pic_reset_def_bypicmode)
+## 与官方版并存
 
-  └─ ColorfulLedTool.jar ──► MiTV PM2 炫彩灯 HIDL 接口
-      (炫彩灯模式)
-      (照明色温)
-      (纯色颜色)
-      (亮度)
-```
+2025 维护版采用独立的桌面身份：
 
-### JNI 调用方式
+| 项目 | 2025 维护版 |
+| --- | --- |
+| 程序名 | `MonitorToolbox2025.exe` |
+| 窗口/托盘名称 | 红米 G Pro 27U 2025 Toolbox |
+| Windows 配置目录 | `%LOCALAPPDATA%\.gpro_controller_2025` |
+| 启动项 | `RedmiToolbox2025.bat` |
+| 默认 ADB Server 端口 | `5039`，设备端口仍是 `5555` |
+| 安装目录 | `MonitorToolbox2025`，使用独立安装器 AppId |
 
-通过 `service call TvService` 调用系统服务，以 `app_process` 执行 jar 包中的 Java 类：
+不会自动导入官方版配置。配置环境变量仍支持 `MIMONITOR_SETTINGS_PATH`，ADB Server 端口仍可用 `MIMONITOR_ADB_SERVER_PORT` 覆盖。
 
-```bash
-# 读取寄存器
-service call TvService 3 s16 "sh -c eval\${IFS}CLASSPATH=/data/data/mitv.service/cache/MtkDirectTool.jar\${IFS}/system/bin/app_process\${IFS}/data/data/mitv.service/cache\${IFS}MtkDirectTool\${IFS}get\${IFS}g_disp__disp_back_light"
+两版仍控制同一台显示器，并使用相同的设备端 helper 部署路径。切换控制版本时应断开另一版的设备连接，避免两版同时部署 helper 或写画质。
 
-# 写入寄存器
-service call TvService 3 s16 "sh -c eval\${IFS}CLASSPATH=...\${IFS}MtkDirectTool\${IFS}set\${IFS}g_disp__disp_back_light\${IFS}50\${IFS}3"
-```
+## 源码运行与测试
 
-单项兼容读取仍可通过 `logcat` 获取结果；页面刷新使用 `batchGet` 一次读取多个寄存器，
-结果写入 `/sdcard/Download/Mimonitor_Toolbox/.mtk_batch_result.txt` 后由桌面端解析。
-
-### 数据加载策略
-
-采用按需加载，不持续轮询：
-
-1. **首次进入页面** — 读取该页面所有 settings key + JNI 寄存器，显示 loading 遮罩
-2. **再次进入** — 直接使用缓存数据，不重新读取
-3. **手动刷新** — 点击"刷新数据"按钮强制重新读取
-4. **模式切换** — 自动刷新当前页面数据
-
-### Jar 自动部署
-
-首次连接时自动检测并补齐 `MtkDirectTool.jar` / `ColorfulLedTool.jar`：
-
-1. 检查设备 `/sdcard/` 中的 jar 大小是否与本地一致
-2. 缺失或大小不一致时从本地 push 到 `/sdcard/`
-3. 从 `/sdcard/` 复制到 `/data/data/mitv.service/cache/`
-
-打包后 jar 会从 `assets/runtime/` 嵌入 exe 中（Nuitka `--include-data-files`）。
-
-## 功能
-
-- 无线 ADB 连接，内网设备自动扫描
-- 画面设置：模式 / 背光 / 黑色级别 / 对比度 / 饱和度 / 色调 / 锐度 / 色温 / 精密控光 / 动态清晰度 / 响应时间 / 色域
-- 游戏模式：准星 / 动态准星 / 狙击镜 / 夜视 / 320Hz / FreeSync / FPS 计数器 / 秒表 / 定时器
-- 准星模式联动：准星默认只在游戏模式下生效，切到其他模式自动隐藏并记忆，回到游戏模式恢复（可关闭此开关）
-- Windows HDR/SDR 分区控光记忆可指定目标显示器：未选定时按 EDID 厂商码自动识别小米系显示器（2025 款 `XMI27B3`、2026 款 `XMI3009` 都覆盖），也可手动指定；目标屏断开时暂停联动。
-- 信号源切换（HDMI 1/2 / DP / USBC）
-- 屏幕灯：炫彩灯模式 / 亮度挡位 / 纯色颜色 / 照明色温
-- 虚拟遥控器
-- 全局快捷键（Windows）+ OSD 悬浮通知（松手后生效，带倒计时进度条）
-- 托盘快捷菜单：右键托盘图标弹出 Fluent 菜单，条目可自定义；取值型是打勾子菜单，数值型悬停或点击即从旁边弹出圆角浮条（图标 + 名称 + 滑杆），拖动时数值实时同步回菜单行，左键单击仍是显示/隐藏窗口
-- 开机自启动最小化
-- 4K UI 模式（3840×2160 / DPI 640，需重启显示器）
-- ADB 保活守护部署与状态检测（内置 `assets/adb_guardian/adbguardian-signed.apk`）
-- 操作日志记录与导出
-
-## 项目资源结构
-
-```text
-Mimonitor_Toolbox/
-├─ monitor_controller.py          # 源码运行入口，转发到应用包
-├─ build.bat                      # Windows 一键打包脚本（Nuitka onefile）
-├─ build_installer.bat            # standalone 便携 zip + Inno Setup 安装器
-├─ installer/MonitorToolbox.iss   # Inno Setup 安装器脚本
-├─ requirements-build.txt         # 锁定的运行与构建依赖
-├─ mimonitor_toolbox/             # 主程序包
-│  ├─ app.py                      # Qt 启动、单实例通信和事件循环
-│  ├─ main_window.py              # 主窗口状态、托盘、快捷键和应用生命周期
-│  ├─ pages.py                    # 各功能页面及控件布局
-│  ├─ device_features.py          # 设备连接、扫描、保活和页面数据刷新
-│  ├─ display_features.py         # 画面、游戏、信号源和灯效控制逻辑
-│  ├─ adb.py                      # 私有 ADB 服务、命令执行和设备通信
-│  ├─ network_scan.py             # Windows 物理网卡筛选和内网端口扫描
-│  ├─ windows.py                  # Windows HDR、自启动和系统接口
-│  ├─ widgets.py                  # OSD、弹窗、加载动画等自定义控件
-│  ├─ core.py                     # 路径、设置、常量和模式映射
-│  └─ __init__.py                 # Python 包标识
-├─ assets/                        # 打包进程序的运行资源
-│  ├─ app/
-│  │  └─ icon.ico                 # 程序图标
-│  ├─ runtime/
-│  │  ├─ adb.exe                  # Windows ADB 客户端
-│  │  ├─ AdbWinApi.dll            # ADB Windows 运行库
-│  │  ├─ AdbWinUsbApi.dll         # ADB Windows USB 运行库
-│  │  ├─ MtkDirectTool.jar        # MTK 寄存器读写 helper
-│  │  └─ ColorfulLedTool.jar      # 屏幕灯控制 helper
-│  └─ adb_guardian/
-│     └─ adbguardian-signed.apk   # 显示器端 ADB 保活应用
-├─ tools/                         # 设备端 helper 源码及说明
-│  ├─ mtk_direct/
-│  │  ├─ MtkDirectTool.java
-│  │  └─ README.md
-│  └─ colorful_led/
-│     ├─ ColorfulLedTool.java
-│     └─ README.md
-└─ tests/                         # 按模块划分的单元测试与运行状态测试
-   ├─ test_adb.py
-   ├─ test_network_scan.py
-   ├─ test_device_features.py
-   ├─ test_display_features.py
-   ├─ test_pages.py
-   ├─ test_runtime.py
-   └─ ...
-```
-
-源码入口只负责启动应用；窗口、页面、设备生命周期和显示器控制逻辑均拆分在 `mimonitor_toolbox/` 中。`assets/` 保存发布版本运行时必须携带的二进制资源，`tools/` 保留对应 helper 的可读源码，`tests/` 用于验证模块边界、设备状态机和 Windows 专属行为。
-
-## 打包
-
-```bash
-# 安装锁定的构建依赖（需要 python.org 安装的 Python，
-# Microsoft Store 版缺少链接库，无法用于 Nuitka 编译）
+```powershell
 python -m pip install -r requirements-build.txt
+python monitor_controller.py
 ```
 
-三种分发形态（GitHub Actions 打 tag 时自动全部产出）：
+源码正常启动会执行原有连接逻辑，并可能部署设备 helper；运行前先检查配置与设备连接。
 
-| 产物 | 脚本 | 说明 |
-| --- | --- | --- |
-| `MonitorToolbox.exe` | `build.bat` | Nuitka onefile 单文件，29 MB |
-| `MonitorToolbox-portable.zip` | `build_installer.bat` | standalone 便携版，解压即用，启动最快 |
-| `MonitorToolbox-Setup.exe` | `build_installer.bat` | Inno Setup 安装器，带快捷方式与卸载入口 |
+离线测试使用临时配置，不连接显示器：
 
-安装器构建依赖 Inno Setup（`winget install JRSoftware.InnoSetup`，或解压安装到 `%LOCALAPPDATA%\InnoSetup` 后脚本自动识别）。
+```powershell
+$env:QT_QPA_PLATFORM = 'offscreen'
+$env:MIMONITOR_SETTINGS_PATH = Join-Path $env:TEMP 'mimonitor-2025-tests-config.json'
+python -m unittest discover -s tests -q
+```
 
-## 依赖
+Java 回执测试在本机有 `javac` 和 `java` 时执行；没有 JDK 时跳过这些用例。
 
-- Python 3.10+
-- PyQt6（版本见 `requirements-build.txt`）
-- PyQt-Fluent-Widgets（版本见 `requirements-build.txt`）
-- ADB（打包进 exe，无需额外安装）
+## 构建
 
-## 感谢认可！🙌
+| 脚本 | 产物 |
+| --- | --- |
+| `build.bat` | `dist-nuitka/MonitorToolbox2025.exe` |
+| `build_nuitka_standalone.bat` | `dist-nuitka-standalone/monitor_controller.dist/MonitorToolbox2025.exe` |
+| `build_installer.bat` | `dist-installer/MonitorToolbox2025-portable.zip` 和 `MonitorToolbox2025-Setup.exe` |
+
+GitHub Actions 在 `main` 推送或 PR 时执行测试；只有 `v2025-*` 标签触发发布构建。当前没有推送发布标签，旧上游版本号不代表本维护版已发布。
+
+设备 helper 源码与说明见 [tools/mtk_direct](tools/mtk_direct/README.md)。后续同步上游应按提交审查，再验证 2025 款；不将上游的 2026 款测试结论作为本设备的实测结论。

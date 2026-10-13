@@ -838,7 +838,7 @@ class DeviceFeaturesMixin:
             self.osd.show_hud(label, "失败")
         if getattr(self, "tray_icon", None):
             self.tray_icon.showMessage(
-                "红米 G Pro 27U Toolbox",
+                "红米 G Pro 27U 2025 Toolbox",
                 message,
                 QSystemTrayIcon.MessageIcon.Warning,
                 3000,
