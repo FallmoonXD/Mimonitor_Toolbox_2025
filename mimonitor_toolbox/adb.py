@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 
 from .core import (
     MTK_BATCH_RESULT_FILE,
@@ -320,6 +321,55 @@ def unblock_adb_spawns():
         _adb_spawn_blocked = False
 
 
+def parse_native_action_result(output, action, expected):
+    """分别验收 native 返回/回读和 Provider，不把部分完成当成全链路成功。"""
+    values = dict(line.strip().split("=", 1) for line in output.splitlines() if "=" in line)
+    if values.get("__version") != "1" or values.get("__action") != action or values.get("__complete") != "1":
+        raise RuntimeError("原生写入结果不完整，未确认成功")
+    if "fatal" in values:
+        raise RuntimeError(f"原生写入异常：{values['fatal']}")
+    try:
+        native_return = int(values["native_return"])
+    except (KeyError, TypeError, ValueError):
+        raise RuntimeError("未取得原生 setter 返回码") from None
+    if native_return != 0:
+        raise RuntimeError(f"原生 setter 返回 {native_return}")
+    readback = {}
+    for key, requested in expected.items():
+        raw = values.get("readback." + key)
+        try:
+            actual = int(raw)
+        except (TypeError, ValueError):
+            raise RuntimeError(f"{key} 未取得原生回读：{raw}") from None
+        if actual != int(requested):
+            raise RuntimeError(f"{key} 回读不一致：目标 {requested}，实际 {actual}")
+        readback[key] = actual
+
+    warnings = []
+    try:
+        bank_before, bank_after = int(values["bank_before"]), int(values["bank_after"])
+    except (KeyError, TypeError, ValueError):
+        bank_before = bank_after = -1
+    if bank_before >= 0 and bank_after >= 0:
+        if bank_before != bank_after:
+            raise RuntimeError(f"写入期间原生场景变化：{bank_before} → {bank_after}")
+    else:
+        warnings.append("未取得原生场景，无法核验写入期间场景是否稳定")
+    provider_return = None
+    if action == "setHdrToneMapping":
+        try:
+            provider_return = int(values["provider_return"])
+        except (KeyError, TypeError, ValueError):
+            detail = f"（{values['provider_error']}）" if values.get("provider_error") else ""
+            warnings.append(f"Provider 返回未取得{detail}；原生回读已确认")
+        else:
+            if provider_return != 0:
+                warnings.append(f"Provider 返回 {provider_return}；原生回读已确认")
+    return {"native_return": native_return, "native_verified": True,
+            "provider_return": provider_return, "provider_error": values.get("provider_error"), "readback": readback,
+            "bank_before": bank_before, "bank_after": bank_after, "warnings": warnings}
+
+
 class Adb:
     def __init__(self, ip=""): self.ip = ip
     @property
@@ -433,20 +483,59 @@ class Adb:
             jar, ["MtkDirectTool", "set", key, val, upd]
         )
         return self.shell(command, check=check)
-    def hdr_tone_mapping(self, val, upd=3, check=False):
+    def hdr_tone_mapping(self, val, upd=3, check=False, expected_bank=None):
         _adb_log(f"hdr_tone_mapping = {val}")
+        if check:
+            return self._checked_native_action("setHdrToneMapping", [val, upd],
+                {"g_video__vid_hdr_tone_mapping_mode": val}, expected_bank=expected_bank)
         jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
         command = build_tvservice_app_process_command(
             jar, ["MtkDirectTool", "setHdrToneMapping", val, upd]
         )
         return self.shell(command, check=check)
-    def jni_set_color_gains(self, red, green, blue, check=False):
+    def jni_set_color_gains(self, red, green, blue, check=False, expected_bank=None):
         _adb_log(f"jni_set_color_gains r={red} g={green} b={blue}")
+        if check:
+            return self._checked_native_action("setColorGains", [red, green, blue],
+                {"g_video__clr_gain_r": red, "g_video__clr_gain_g": green, "g_video__clr_gain_b": blue},
+                expected_bank=expected_bank)
         jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
         command = build_tvservice_app_process_command(
             jar, ["MtkDirectTool", "setColorGains", red, green, blue]
         )
         return self.shell(command, check=check)
+
+    def require_picture_bank(self, expected_bank, timeout=0):
+        deadline = time.monotonic() + timeout
+        while True:
+            actual = self.jni_batch_get_or_single(["g_video__picture_mode"], check=True).get("g_video__picture_mode")
+            if actual is not None and int(actual) == int(expected_bank):
+                return
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"画面场景已变化或无法确认：目标 {expected_bank}，实际 {actual}；停止写入")
+            time.sleep(0.1)
+
+    def _checked_native_action(self, action, arguments, expected, expected_bank=None):
+        result_file = f"/sdcard/Download/Mimonitor_Toolbox/.mtk_action_{uuid.uuid4().hex}.txt"
+        with self.transaction():
+            self.check_and_heal_jar()
+            command = build_tvservice_app_process_command(
+                "/data/data/mitv.service/cache/MtkDirectTool.jar",
+                ["MtkDirectTool", action + "Checked"] + arguments +
+                [int(expected_bank) if expected_bank is not None else -1, result_file],
+            )
+            try:
+                output = self.shell(
+                    "mkdir -p /sdcard/Download/Mimonitor_Toolbox; "
+                    f"{command} >/dev/null; "
+                    f"i=0; while [ $i -lt 30 ] && [ ! -f {result_file} ]; do sleep 0.1; i=$((i+1)); done; "
+                    f"cat {result_file} 2>/dev/null", check=True,
+                )
+                result = parse_native_action_result(output, action, expected)
+                _adb_log(f"{action} verified: {result}")
+                return result
+            finally:
+                self.shell(f"rm -f {result_file}")
     def jni_get(self, key, check=False):
         with self.transaction():
             jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
@@ -493,15 +582,15 @@ class Adb:
         _adb_log(f"jni_batch_get {','.join(safe_keys)} => {vals}")
         return vals
 
-    def jni_batch_get_or_single(self, keys, check=False):
+    def jni_batch_get_or_single(self, keys, check=False, optional_keys=()):
         vals = self.jni_batch_get(keys)
         for key in keys:
             if key in vals:
                 continue
             try:
-                vals[key] = int(self.jni_get(key, check=check))
+                vals[key] = int(self.jni_get(key, check=check and key not in optional_keys))
             except Exception:
-                if check:
+                if check and key not in optional_keys:
                     raise
                 pass
         return vals

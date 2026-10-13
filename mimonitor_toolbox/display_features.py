@@ -567,6 +567,8 @@ class DisplayFeaturesMixin:
                 self.log(f"  · 跳过 {name}（{reason}）")
             for name, error in result.failed:
                 self.log(f"  · 失败 {name}：{error}")
+            for name, warning in getattr(result, "warnings", []):
+                self.log(f"  · 警告 {name}：{warning}")
             self.current_vals.update(values)
             self._page_loaded.discard("picturePage")
             # FreeSync 在游戏页，预设会动它，那边的开关也得回读
@@ -1715,6 +1717,15 @@ class DisplayFeaturesMixin:
     def _active_picture_scene_mode(self):
         current_vals = getattr(self, "current_vals", {})
         try:
+            native_mode = int(current_vals.get("g_video__picture_mode"))
+        except (TypeError, ValueError):
+            native_mode = 0
+        if str(current_vals.get("g_dovi_info__")) == "1":
+            # 杜比信号已确认，但场景读取失败时不借用数据库中的 SDR/HDR 场景。
+            return native_mode if native_mode in (11, 12, 13, 18, 19) else None
+        if native_mode > 0:
+            return native_mode
+        try:
             scenario = int(current_vals.get("picture_preset_scenario"))
         except (TypeError, ValueError):
             scenario = None
@@ -1759,10 +1770,24 @@ class DisplayFeaturesMixin:
             mode = DisplayFeaturesMixin._active_picture_scene_mode(self)
         visible = is_hdr_tone_mapping_picture_mode(mode)
         card.setVisible(visible)
+        if str(getattr(self, "current_vals", {}).get("g_dovi_info__")) == "1":
+            card.setToolTip("已确认杜比信号；此处回读的是 HDR 色调映射配置，不能据此判断杜比算法。")
+        else:
+            card.setToolTip("")
 
     def _update_picture_mode_hint(self, mode):
         label = getattr(self, "picture_mode_hint_label", None)
         if not label:
+            return
+
+        current_vals = getattr(self, "current_vals", {})
+        native_mode = current_vals.get("g_video__picture_mode")
+        dovi = current_vals.get("g_dovi_info__")
+        signal = {0: "杜比信号未确认", 1: "杜比信号已确认"}.get(dovi, "未取得杜比信号状态")
+        label.setToolTip(f"原生场景：{native_mode if native_mode is not None else '未取得'}；{signal}")
+        if str(dovi) == "1" and mode is None:
+            label.setText("当前场景：Dolby Vision")
+            FluentStyleSheet.LABEL.apply(label)
             return
 
         try:
@@ -2024,11 +2049,16 @@ class DisplayFeaturesMixin:
         self._mark_adb_busy(2.5)
         state_key = "settings_display_hdr_color_tone"
         previous = self._take_control_previous(state_key)
+        receipt = {}
+        expected_bank = self.current_vals.get("g_video__picture_mode")
+        guard = {"expected_bank": expected_bank} if expected_bank is not None else {}
 
         def operation():
             with self.adb.transaction():
                 self.adb.check_and_heal_jar()
-                self.adb.hdr_tone_mapping(mtk_value, check=True)
+                outcome = self.adb.hdr_tone_mapping(mtk_value, check=True, **guard)
+                if isinstance(outcome, dict):
+                    receipt.update(outcome)
                 self.adb.put("picture_hdr_tone_mapping", str(mtk_value), check=True)
                 self.adb.put(state_key, str(ui_value), check=True)
                 self.adb.refresh_pq(check=True)
@@ -2036,6 +2066,8 @@ class DisplayFeaturesMixin:
         def success():
             self._note_picture_change()
             self.log(f"HDR 色调映射: {name}")
+            for warning in receipt.get("warnings", []):
+                self.log(f"HDR 色调映射警告：{warning}")
             self.current_vals["picture_hdr_tone_mapping"] = mtk_value
             self.current_vals[state_key] = ui_value
             self._optimistic_highlight(state_key, ui_value)
@@ -2044,6 +2076,9 @@ class DisplayFeaturesMixin:
             if previous is not None:
                 self.current_vals[state_key] = previous
                 self._optimistic_highlight(state_key, previous)
+            refresh = getattr(self, "_refresh_page_data", None)
+            if callable(refresh):
+                QTimer.singleShot(300, lambda: refresh("picturePage"))
 
         self._run_adb_action("HDR 色调映射", operation, success, failure)
 
@@ -2104,17 +2139,25 @@ class DisplayFeaturesMixin:
                 gain = 1024
             values[setting] = max(524, min(1524, gain))
         self.current_vals.update(values)
+        receipt = {}
+        expected_bank = self.current_vals.get("g_video__picture_mode")
+        guard = {"expected_bank": expected_bank} if expected_bank is not None else {}
 
         def operation():
             with self.adb.transaction():
+                if expected_bank is not None:
+                    self.adb.require_picture_bank(expected_bank)
                 self.adb.jni_set("g_video__clr_temp", XIAOMI_TO_MTK_COLOR_TEMP[CUSTOM_COLOR_TEMP_VALUE], check=True)
                 self.adb.put("picture_color_temperature", str(CUSTOM_COLOR_TEMP_VALUE), check=True)
-                self.adb.jni_set_color_gains(
+                outcome = self.adb.jni_set_color_gains(
                     values["picture_red_gain"],
                     values["picture_green_gain"],
                     values["picture_blue_gain"],
                     check=True,
+                    **guard,
                 )
+                if isinstance(outcome, dict):
+                    receipt.update(outcome)
                 for setting, _slider_name, _gain_jni_key in gain_controls:
                     self.adb.put(setting, str(values[setting]), check=True)
                 self.adb.refresh_pq(check=True)
@@ -2122,6 +2165,8 @@ class DisplayFeaturesMixin:
         def success():
             self._note_picture_change()
             self.log(f"{title}: {value}")
+            for warning in receipt.get("warnings", []):
+                self.log(f"色增益警告：{warning}")
 
         def failure():
             self.current_vals.update(previous_values)
@@ -2131,6 +2176,9 @@ class DisplayFeaturesMixin:
             if previous_temp is not None:
                 restored["picture_color_temperature"] = previous_temp
             self.values_signal.emit(restored)
+            refresh = getattr(self, "_refresh_page_data", None)
+            if callable(refresh):
+                QTimer.singleShot(300, lambda: refresh("picturePage"))
 
         self._run_adb_action(title, operation, success, failure)
 

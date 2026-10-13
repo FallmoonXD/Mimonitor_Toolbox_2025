@@ -48,13 +48,22 @@ PICTURE_PRESET_SETTINGS_KEYS = (
     "tv_picture_video_color_space",
 )
 
+PICTURE_PRESET_OPTIONAL_JNI_KEYS = (
+    "g_video__vid_hdr_tone_mapping_mode",
+    "g_video__clr_gain_r",
+    "g_video__clr_gain_g",
+    "g_video__clr_gain_b",
+    "g_video__picture_mode",
+    "g_dovi_info__",
+)
+
 PICTURE_PRESET_JNI_KEYS = (
     "g_disp__disp_back_light",
     "g_video__vid_gamut_mapping_mode",
     "g_video__clr_temp",
     "g_video__vid_local_dimming",
     "g_video__light_sensor_switch",
-)
+) + PICTURE_PRESET_OPTIONAL_JNI_KEYS
 
 
 # FreeSync 在 DP/USB-C 和 HDMI 上走**不同的 MTK 键**，且"开"的取值也不同
@@ -154,13 +163,19 @@ def _apply_color_gains(adb, values):
     for name in (red, green, blue):
         if not 524 <= name <= 1524:
             raise ValueError(f"色增益 {name} 超出 524-1524")
+    guard = {}
+    if values.get("g_video__picture_mode") is not None:
+        bank = values["g_video__picture_mode"]
+        adb.require_picture_bank(bank)
+        guard["expected_bank"] = bank
     adb.jni_set("g_video__clr_temp", XIAOMI_TO_MTK_COLOR_TEMP[CUSTOM_COLOR_TEMP_VALUE], check=True)
     adb.put("picture_color_temperature", str(CUSTOM_COLOR_TEMP_VALUE), check=True)
-    adb.jni_set_color_gains(red, green, blue, check=True)
+    receipt = adb.jni_set_color_gains(red, green, blue, check=True, **guard)
     adb.put("picture_red_gain", str(red), check=True)
     adb.put("picture_green_gain", str(green), check=True)
     adb.put("picture_blue_gain", str(blue), check=True)
     adb.refresh_pq(check=True)
+    return receipt
 
 
 def _jni_setting(jni_key, setting_key, osd_key=None):
@@ -184,11 +199,15 @@ def _apply_hdr_tone_mapping(adb, values):
     if ui_value not in HDR_TONE_MAPPING_UI_TO_MTK:
         raise ValueError(f"未知 HDR 色调映射枚举 {ui_value}")
     mtk_value = HDR_TONE_MAPPING_UI_TO_MTK[ui_value]
+    guard = {}
+    if values.get("g_video__picture_mode") is not None:
+        guard["expected_bank"] = values["g_video__picture_mode"]
     adb.check_and_heal_jar()
-    adb.hdr_tone_mapping(mtk_value, check=True)
+    receipt = adb.hdr_tone_mapping(mtk_value, check=True, **guard)
     adb.put("picture_hdr_tone_mapping", str(mtk_value), check=True)
     adb.put("settings_display_hdr_color_tone", str(ui_value), check=True)
     adb.refresh_pq(check=True)
+    return receipt
 
 
 @dataclass(frozen=True)
@@ -261,13 +280,16 @@ class ApplyResult:
     applied: list = field(default_factory=list)
     failed: list = field(default_factory=list)      # [(label, 错误文本)]
     skipped: list = field(default_factory=list)     # [(label, 原因)]
+    warnings: list = field(default_factory=list)    # [(label, 已回读但未完整成功的步骤)]
 
     @property
     def ok(self):
-        return not self.failed
+        return not self.failed and not self.warnings
 
     def summary(self):
-        parts = [f"成功 {len(self.applied)} 项"]
+        parts = [f"{'已应用' if self.warnings else '成功'} {len(self.applied)} 项"]
+        if self.warnings:
+            parts.append(f"警告 {len(self.warnings)} 项")
         if self.skipped:
             parts.append(f"跳过 {len(self.skipped)} 项")
         if self.failed:
@@ -279,12 +301,27 @@ class ApplyResult:
 def apply_preset(adb, values, on_item=None):
     """按固定顺序把 `values` 逐项写进设备。
 
-    单项失败**不中断**后续项（这是产品决定：尽量多写成功，最后汇报哪几项失败），
+    已采集原生场景时先等目标场景稳定；无法确认则停止剩余画质写入。
+    普通单项失败**不中断**后续项（尽量多写成功，最后汇报哪几项失败），
     所以每项的异常都收敛在它自己的边界上。注意 `adb` 调用内部仍是 check=True ——
     一项的写序列中途失败即整项判失败，不做半项的猜测性修补。
     """
     result = ApplyResult()
-    for item in PICTURE_ITEMS:
+    bank_checked = False
+    for index, item in enumerate(PICTURE_ITEMS):
+        if (not bank_checked and item.id not in ("freesync", "picture_mode")
+                and values.get("g_video__picture_mode") is not None):
+            try:
+                adb.require_picture_bank(values["g_video__picture_mode"], timeout=2)
+            except Exception as exc:
+                result.failed.append(("画面场景校验", str(exc)))
+                for remaining in PICTURE_ITEMS[index:]:
+                    reason = "目标场景未确认，停止写入画质参数"
+                    result.skipped.append((remaining.label, reason))
+                    if on_item:
+                        on_item(remaining, "skipped", reason)
+                break
+            bank_checked = True
         if item.condition is not None:
             try:
                 should_apply, reason = item.condition(values)
@@ -297,15 +334,17 @@ def apply_preset(adb, values, on_item=None):
                     on_item(item, "skipped", reason)
                 continue
         try:
-            item.apply(adb, values)
+            receipt = item.apply(adb, values)
         except Exception as exc:
             result.failed.append((item.label, str(exc)))
             if on_item:
                 on_item(item, "failed", str(exc))
             continue
         result.applied.append(item.label)
+        warnings = receipt.get("warnings", []) if isinstance(receipt, dict) else []
+        result.warnings.extend((item.label, warning) for warning in warnings)
         if on_item:
-            on_item(item, "applied", "")
+            on_item(item, "applied", "；".join(warnings))
     return result
 
 

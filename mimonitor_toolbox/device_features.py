@@ -47,6 +47,7 @@ from .network_scan import (
 )
 from .presets import (
     PICTURE_PRESET_JNI_KEYS,
+    PICTURE_PRESET_OPTIONAL_JNI_KEYS,
     PICTURE_PRESET_SETTINGS_KEYS,
     freesync_is_on,
     freesync_jni_key,
@@ -56,6 +57,22 @@ from .widgets import InstallProgressDialog, OverlayResizeFilter
 _global_overlay_filter = None
 CREATE_NEW_CONSOLE = getattr(subprocess, "CREATE_NEW_CONSOLE", 0x00000010)
 RESUME_DISCOVERY_INTERVAL_SECONDS = 30.0
+
+
+def _native_int(value):
+    try:
+        value = int(value)
+        return value if value >= 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def apply_picture_signal_reads(settings_vals, jni_batch_vals):
+    """原生场景/杜比状态只用于识别，不覆盖可写的 picture_mode。"""
+    mode = _native_int(jni_batch_vals.get("g_video__picture_mode"))
+    dovi = _native_int(jni_batch_vals.get("g_dovi_info__"))
+    settings_vals["g_video__picture_mode"] = mode if mode else None
+    settings_vals["g_dovi_info__"] = dovi if dovi in (0, 1) else None
 
 
 def apply_picture_jni_overrides(settings_vals, jni_batch_vals):
@@ -68,7 +85,19 @@ def apply_picture_jni_overrides(settings_vals, jni_batch_vals):
     背光读数要另外走 jni_values_signal 去驱动滑杆，所以单独返回，其余直接就地
     覆盖 `settings_vals`。页面刷新与预设快照采集共用本函数，保证两边口径一致。
     """
+    # 不支持的 native 字段可能返回 -1；它不是有效档位，也不能转成正常默认值。
+    jni_batch_vals = {
+        key: parsed for key, value in jni_batch_vals.items()
+        if (parsed := _native_int(value)) is not None
+    }
     jni_out = {}
+
+    # factory WB getter 在 2025 固件上可能与当前 bank 不一致；快照用 native RGB。
+    for suffix, setting in (("r", "picture_red_gain"), ("g", "picture_green_gain"),
+                            ("b", "picture_blue_gain")):
+        key = "g_video__clr_gain_" + suffix
+        if key in jni_batch_vals:
+            settings_vals[setting] = jni_batch_vals[key]
 
     # 背光：JNI 是真实生效值
     if "g_disp__disp_back_light" in jni_batch_vals:
@@ -111,9 +140,8 @@ def apply_picture_jni_overrides(settings_vals, jni_batch_vals):
         try:
             tone_val = int(jni_batch_vals["g_video__vid_hdr_tone_mapping_mode"])
             settings_vals["picture_hdr_tone_mapping"] = tone_val
-            ui_val = HDR_TONE_MAPPING_MTK_TO_UI.get(tone_val)
-            if ui_val is not None:
-                settings_vals["settings_display_hdr_color_tone"] = ui_val
+            # 未知值（如 MTK 4）清除旧高亮，保留原始值供诊断和快照使用。
+            settings_vals["settings_display_hdr_color_tone"] = HDR_TONE_MAPPING_MTK_TO_UI.get(tone_val)
         except (TypeError, ValueError): pass
 
     return jni_out
@@ -204,11 +232,7 @@ class DeviceFeaturesMixin:
                     "picture_response_time", "tv_picture_advanced_video_color_space",
                     "tv_picture_video_color_space", "tv_picture_light_sensor",
                 ],
-                "jni": [
-                    "g_disp__disp_back_light", "g_video__vid_gamut_mapping_mode",
-                    "g_video__clr_temp", "g_video__vid_local_dimming",
-                    "g_video__vid_hdr_tone_mapping_mode", "g_video__light_sensor_switch",
-                ],
+                "jni": list(PICTURE_PRESET_JNI_KEYS),
             },
             "gamePage": {
                 "settings": [
@@ -1366,7 +1390,9 @@ class DeviceFeaturesMixin:
         if "tv_picture_light_sensor" in vals:
             self._sync_light_sensor_switch(str(vals["tv_picture_light_sensor"]).strip() == "1")
 
-        if "picture_preset_scenario" in vals or "picture_mode" in vals:
+        if any(key in vals for key in (
+            "picture_preset_scenario", "picture_mode", "g_video__picture_mode", "g_dovi_info__",
+        )):
             self._highlight_mode(self._active_picture_scene_mode())
 
         if "mitv.tvplayer.hdmi.last.source" in vals:
@@ -1445,8 +1471,11 @@ class DeviceFeaturesMixin:
                 except (TypeError, ValueError):
                     values[key] = raw
 
-            jni_vals = self.adb.jni_batch_get_or_single(PICTURE_PRESET_JNI_KEYS, check=True)
+            jni_vals = self.adb.jni_batch_get_or_single(
+                PICTURE_PRESET_JNI_KEYS, check=True, optional_keys=PICTURE_PRESET_OPTIONAL_JNI_KEYS,
+            )
             apply_picture_jni_overrides(values, jni_vals)
+            apply_picture_signal_reads(values, jni_vals)
 
             # FreeSync 也纳入预设：它开着会把设备锁在游戏模式，必须能和画面模式
             # 一起被记录、一起被还原。它没有 settings 键，且走的 MTK 键随输入源
@@ -1503,6 +1532,8 @@ class DeviceFeaturesMixin:
 
                     # 画面页各项以 JNI 回读为准（口径与预设快照采集一致）
                     jni_vals.update(apply_picture_jni_overrides(settings_vals, jni_batch_vals))
+                    if page_name == "picturePage":
+                        apply_picture_signal_reads(settings_vals, jni_batch_vals)
 
                     # 读取 JNI 模式 (game page)
                     if cfg.get("jni_mode"):

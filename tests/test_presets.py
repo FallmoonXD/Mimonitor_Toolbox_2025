@@ -27,8 +27,11 @@ class FakeAdb:
     def refresh_pq(self, check=False):
         self._record("refresh_pq", check)
 
-    def jni_set_color_gains(self, red, green, blue, check=False):
+    def jni_set_color_gains(self, red, green, blue, check=False, expected_bank=None):
         self._record("jni_set_color_gains", red, green, blue, check)
+
+    def require_picture_bank(self, expected_bank, timeout=0):
+        self._record("require_picture_bank", expected_bank)
 
     def hdr_tone_mapping(self, val, upd=3, check=False):
         self._record("hdr_tone_mapping", val, upd, check)
@@ -406,6 +409,60 @@ class ReadPipelineCoverageTests(unittest.TestCase):
         from mimonitor_toolbox import presets
 
         self.assertNotIn("picture_preset_scenario", presets.PICTURE_PRESET_SETTINGS_KEYS)
+
+    def test_read_only_native_scene_metadata_is_never_written_as_settings(self):
+        from mimonitor_toolbox import presets
+
+        target = FakeAdb()
+        values = dict(full_values(), g_video__picture_mode=13, g_dovi_info__=1)
+        presets.apply_preset(target, values)
+        written = [call[1] for call in target.calls if call[0] == "put"]
+        self.assertNotIn("g_video__picture_mode", written)
+        self.assertNotIn("g_dovi_info__", written)
+
+    def test_provider_warning_is_not_reported_as_complete_preset_success(self):
+        from mimonitor_toolbox import presets
+
+        class PartialAdb(FakeAdb):
+            def hdr_tone_mapping(self, val, upd=3, check=False):
+                super().hdr_tone_mapping(val, upd, check)
+                return {"warnings": ["Provider 返回 -1；原生回读已确认"]}
+
+        result = presets.apply_preset(PartialAdb(), full_values(mode=16))
+        self.assertIn("HDR 色调映射", result.applied)
+        self.assertEqual(result.failed, [])
+        self.assertFalse(result.ok)
+        self.assertEqual(result.warnings, [("HDR 色调映射", "Provider 返回 -1；原生回读已确认")])
+        self.assertIn("警告 1 项", result.summary())
+
+    def test_rgb_bank_guard_runs_before_any_calibration_write(self):
+        from mimonitor_toolbox import presets
+
+        class WrongBankAdb(FakeAdb):
+            def require_picture_bank(self, expected_bank):
+                self._record("require_picture_bank", expected_bank)
+                raise RuntimeError("bank changed")
+
+        target = WrongBankAdb()
+        values = dict(full_values(color_temp=3), g_video__picture_mode=13)
+        with self.assertRaisesRegex(RuntimeError, "bank changed"):
+            presets._apply_color_gains(target, values)
+        self.assertEqual(target.calls, [("require_picture_bank", 13)])
+
+    def test_wrong_preset_signal_bank_stops_all_remaining_picture_writes(self):
+        from mimonitor_toolbox import presets
+
+        class WrongBankAdb(FakeAdb):
+            def require_picture_bank(self, expected_bank, timeout=0):
+                self._record("require_picture_bank", expected_bank)
+                raise RuntimeError("bank changed")
+
+        target = WrongBankAdb()
+        result = presets.apply_preset(target, dict(full_values(), g_video__picture_mode=13))
+        self.assertEqual(result.applied, ["FreeSync", "画面模式"])
+        self.assertEqual(result.failed, [("画面场景校验", "bank changed")])
+        self.assertTrue(result.skipped)
+        self.assertEqual([call[1] for call in target.calls if call[0] == "put"], ["picture_mode"])
 
 
 class FreeSyncPresetTests(unittest.TestCase):

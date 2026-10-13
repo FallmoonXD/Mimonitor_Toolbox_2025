@@ -1235,6 +1235,9 @@ class StateMachineTests(unittest.TestCase):
             def setVisible(self, visible):
                 self.visible = visible
 
+            def setToolTip(self, text):
+                self.tooltip = text
+
         class FakeApp:
             def __init__(self, current_vals):
                 self.current_vals = current_vals
@@ -1371,7 +1374,7 @@ class StateMachineTests(unittest.TestCase):
             app.App._refresh_page_data(FakeApp(), "picturePage")
 
         self.assertEqual(FakeApp.adb.depth, 0)
-        self.assertIn(("values", ({"picture_mode": 2},)), emitted)
+        self.assertIn(("values", ({"picture_mode": 2, "g_video__picture_mode": None, "g_dovi_info__": None},)), emitted)
         self.assertIn(("jni", ({"g_disp__disp_back_light": 40},)), emitted)
         self.assertIn(("finished", ("picturePage", True)), emitted)
 

@@ -1,0 +1,15 @@
+{
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "source": "Getter-only capture on 2026-10-13; no picture setters or signal changes",
+  "native": {
+    "g_video__picture_mode": "13",
+    "g_dovi_info__": "1",
+    "g_disp__disp_back_light": "100",
+    "g_video__vid_local_dimming": "2",
+    "g_video__vid_hdr_tone_mapping_mode": "0",
+    "g_video__clr_temp": "0",
+    "g_video__clr_gain_r": "1022",
+    "g_video__clr_gain_g": "1008",
+    "g_video__clr_gain_b": "942"
+  }
+}

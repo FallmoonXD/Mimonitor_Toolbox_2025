@@ -12,6 +12,41 @@ public class MtkDirectTool {
     private static final String TV_CLASSPATH =
             "/system/framework/mitvmiddlewareimpl.jar:/system_ext/priv-app/TvServices/TvServices.apk";
     private static final String NATIVE_LIB_PATH = "/vendor/lib64:/system/lib64:/system_ext/lib64";
+    private static String checkedResultFile;
+    private static int expectedBank = -1;
+    private static final StringBuilder checkedResult = new StringBuilder();
+
+    private static void receipt(String key, Object value) {
+        checkedResult.append(key).append('=').append(value).append('\n');
+    }
+
+    private static Integer readReceipt(ClassLoader loader, String key, String resultKey) {
+        try {
+            Class<?> cls = loader.loadClass("com.mediatek.twoworlds.tv.TVNative");
+            Method get = cls.getDeclaredMethod("getConfigValue_native", int.class, String.class);
+            get.setAccessible(true);
+            Integer value = (Integer) get.invoke(null, -1, key);
+            receipt(resultKey, value);
+            return value;
+        } catch (Throwable error) {
+            receipt(resultKey, "ERROR:" + error.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private static void checkBank(ClassLoader loader, int expected) {
+        Integer bank = readReceipt(loader, "g_video__picture_mode", "bank_before");
+        if (expected >= 0 && (bank == null || bank.intValue() != expected)) {
+            throw new IllegalStateException("Picture bank changed: expected " + expected + ", actual " + bank);
+        }
+    }
+
+    private static void readCheckedValues(ClassLoader loader, String... keys) throws Exception {
+        if (checkedResultFile == null) return;
+        Thread.sleep(250);
+        for (String key : keys) readReceipt(loader, key, "readback." + key);
+        readReceipt(loader, "g_video__picture_mode", "bank_after");
+    }
 
     private static void log(String msg) {
         System.out.println(msg);
@@ -66,6 +101,8 @@ public class MtkDirectTool {
         int ret = (Integer) method.invoke(display, userColorTemp, data, 0);
         log("RESULT: SET_COLOR_GAINS r=" + red + " g=" + green + " b=" + blue + ", return: " + ret);
         writeResult(String.valueOf(ret));
+        receipt("native_return", ret);
+        readCheckedValues(classLoader, "g_video__clr_gain_r", "g_video__clr_gain_g", "g_video__clr_gain_b");
     }
 
     private static void setHdrToneMapping(ClassLoader classLoader, Method setConfigValueNative, int value,
@@ -74,6 +111,10 @@ public class MtkDirectTool {
                 null, -1, "g_video__vid_hdr_tone_mapping_mode", value, isUpdate);
         Integer hdrAttrRet = null;
         try {
+            if (checkedResultFile != null && configRet != 0) {
+                receipt("native_return", configRet);
+                return;
+            }
             Class<?> providerClass = classLoader.loadClass("xiaomi.hardware.mitv.provider.V1_0.IMiTVProvider");
             Object provider = providerClass.getMethod("getService", boolean.class).invoke(null, false);
             if (provider != null) {
@@ -82,10 +123,14 @@ public class MtkDirectTool {
             }
         } catch (Exception e) {
             log("WARN: setHdrAttr failed: " + e.getMessage());
+            receipt("provider_error", e.getClass().getSimpleName() + ":" + e.getMessage());
         }
         log("RESULT: SET_HDR_TONE_MAPPING value=" + value + ", configReturn: " + configRet
                 + ", hdrAttrReturn: " + (hdrAttrRet == null ? "N/A" : hdrAttrRet));
         writeResult(String.valueOf(configRet));
+        receipt("native_return", configRet);
+        receipt("provider_return", hdrAttrRet == null ? "N/A" : hdrAttrRet);
+        readCheckedValues(classLoader, "g_video__vid_hdr_tone_mapping_mode");
     }
 
     private static void batchGet(Method getConfigValueNative, String[] keys, int startIndex) {
@@ -117,10 +162,23 @@ public class MtkDirectTool {
         }
 
         String cmd = args[0];
+        if (cmd.equals("setColorGainsChecked") || cmd.equals("setHdrToneMappingChecked")) {
+            int required = cmd.equals("setColorGainsChecked") ? 6 : 5;
+            if (args.length != required) throw new IllegalArgumentException("Invalid checked action arguments");
+            checkedResultFile = args[args.length - 1];
+            expectedBank = Integer.parseInt(args[args.length - 2]);
+            if (!checkedResultFile.matches("/sdcard/Download/Mimonitor_Toolbox/\\.mtk_action_[a-f0-9]+\\.txt")) {
+                throw new IllegalArgumentException("Invalid checked result path");
+            }
+            cmd = cmd.substring(0, cmd.length() - "Checked".length());
+            receipt("__version", 1);
+            receipt("__action", cmd);
+        }
         String key = args.length >= 2 ? args[1] : null;
 
         try {
             ClassLoader classLoader = tvClassLoader();
+            if (checkedResultFile != null) checkBank(classLoader, expectedBank);
 
             if ("setColorGains".equals(cmd)) {
                 if (args.length < 4) {
@@ -233,6 +291,13 @@ public class MtkDirectTool {
             log("FATAL ERROR: " + e.getMessage());
             writeResult("FATAL: " + e.getMessage());
             e.printStackTrace();
+            receipt("fatal", e.getMessage());
+        } finally {
+            if (checkedResultFile != null) {
+                receipt("__complete", 1);
+                writeFile(checkedResultFile, checkedResult.toString());
+                System.exit(0);
+            }
         }
 
         System.exit(0);

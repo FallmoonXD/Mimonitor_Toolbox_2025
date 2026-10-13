@@ -218,6 +218,28 @@ class PageContractTests(unittest.TestCase):
         window.deleteLater()
         _qt_application.processEvents()
 
+    def test_native_dolby_signal_overrides_stale_standard_scene_without_writing(self):
+        from mimonitor_toolbox.main_window import App
+
+        with mock.patch.object(App, "register_global_hotkeys"), \
+                mock.patch.object(App, "setup_tray"), \
+                mock.patch.object(App, "_auto_connect_on_startup"):
+            window = App()
+        window._apply_polled_values({
+            "picture_mode": 14, "picture_preset_scenario": 14,
+            "g_video__picture_mode": 13, "g_dovi_info__": 1,
+            "picture_hdr_tone_mapping": 0, "settings_display_hdr_color_tone": 1,
+        })
+        self.assertEqual(window.picture_mode_hint_label.text(), "当前场景：Dolby Vision 自定义")
+        self.assertIn("杜比信号已确认", window.picture_mode_hint_label.toolTip())
+        self.assertIn("不能据此判断杜比算法", window.hdr_tone_mapping_card.toolTip())
+        self.assertTrue(all(not button.isChecked() for button in window.mode_btns.values()))
+        window._apply_polled_values({"picture_hdr_tone_mapping": 4, "settings_display_hdr_color_tone": None})
+        self.assertTrue(all(not button.isChecked() for button in window.state_buttons["settings_display_hdr_color_tone"].values()))
+        window._cleanup_done = True
+        window.deleteLater()
+        _qt_application.processEvents()
+
     def test_crosshair_toggle_lives_in_tools_page_and_defaults_on(self):
         """准星联动开关放在软件设置页（不在游戏页），且默认开启。"""
         from mimonitor_toolbox import display_features
