@@ -11,6 +11,7 @@ hdr_tone_mapping / check_and_heal_jar 即可），所以可以用假的 adb 直�
 """
 
 from dataclasses import dataclass, field
+from .picture_modes import validate_mode_target
 
 from .core import (
     CUSTOM_COLOR_TEMP_VALUE,
@@ -120,7 +121,8 @@ def _has_freesync(values):
 
 
 def _apply_picture_mode(adb, values):
-    adb.put("picture_mode", str(_as_int(values, "picture_mode")), check=True)
+    key = "g_video__picture_mode" if values.get("g_video__picture_mode") is not None else "picture_mode"
+    return adb.picture_mode(_as_int(values, key), check=True)
 
 
 def _apply_light_sensor(adb, values):
@@ -195,7 +197,12 @@ def _apply_hdr_tone_mapping(adb, values):
 
     `picture_hdr_tone_mapping` 存 MTK 枚举，`settings_display_hdr_color_tone` 存 UI 枚举。
     """
-    ui_value = _as_int(values, "settings_display_hdr_color_tone")
+    raw = values.get("g_video__vid_hdr_tone_mapping_mode")
+    if raw is not None:
+        from .core import HDR_TONE_MAPPING_MTK_TO_UI
+        ui_value = HDR_TONE_MAPPING_MTK_TO_UI.get(int(raw))
+    else:
+        ui_value = _as_int(values, "settings_display_hdr_color_tone")
     if ui_value not in HDR_TONE_MAPPING_UI_TO_MTK:
         raise ValueError(f"未知 HDR 色调映射枚举 {ui_value}")
     mtk_value = HDR_TONE_MAPPING_UI_TO_MTK[ui_value]
@@ -207,6 +214,12 @@ def _apply_hdr_tone_mapping(adb, values):
     adb.put("picture_hdr_tone_mapping", str(mtk_value), check=True)
     adb.put("settings_display_hdr_color_tone", str(ui_value), check=True)
     adb.refresh_pq(check=True)
+    actual = adb.read_picture_state()
+    if actual["g_video__vid_hdr_tone_mapping_mode"] != mtk_value or (
+        values.get("g_video__picture_mode") is not None
+        and actual["g_video__picture_mode"] != values["g_video__picture_mode"]
+    ) or actual["g_dovi_info__"] != 0:
+        raise RuntimeError("色调映射最终回读不一致或输入已变化")
     return receipt
 
 
@@ -233,8 +246,9 @@ def _needs_custom_color_temp(values):
 def _needs_hdr_mode(values):
     # 画面模式排在最前几位写入，所以这里读的是**预设自己的模式**，不是设备当前
     # 模式 —— 这正是把模式放在最前写的好处之一。
-    if not is_hdr_tone_mapping_picture_mode(_as_int(values, "picture_mode")):
-        return False, "预设的模式不是 HDR/Dolby Vision，该项不存在"
+    key = "g_video__picture_mode" if values.get("g_video__picture_mode") is not None else "picture_mode"
+    if not is_hdr_tone_mapping_picture_mode(_as_int(values, key)):
+        return False, "预设的模式不是 HDR；杜比输入不应用 HDR 色调映射"
     return True, ""
 
 
@@ -302,11 +316,20 @@ def apply_preset(adb, values, on_item=None):
     """按固定顺序把 `values` 逐项写进设备。
 
     已采集原生场景时先等目标场景稳定；无法确认则停止剩余画质写入。
-    普通单项失败**不中断**后续项（尽量多写成功，最后汇报哪几项失败），
+    普通单项失败**不中断**后续项；模式、RGB 或 HDR tone 回读失败时停止，
+    避免输入变化后继续写后续参数。
     所以每项的异常都收敛在它自己的边界上。注意 `adb` 调用内部仍是 check=True ——
     一项的写序列中途失败即整项判失败，不做半项的猜测性修补。
     """
     result = ApplyResult()
+    if values.get("g_video__picture_mode") is not None:
+        try:
+            state = adb.read_picture_state()
+            validate_mode_target(values["g_video__picture_mode"], state["g_video__picture_mode"], state["g_dovi_info__"])
+        except Exception as exc:
+            result.failed.append(("画面场景校验", str(exc)))
+            result.skipped.extend((item.label, "输入信号未确认，停止写入预设") for item in PICTURE_ITEMS)
+            return result
     bank_checked = False
     for index, item in enumerate(PICTURE_ITEMS):
         if (not bank_checked and item.id not in ("freesync", "picture_mode")
@@ -339,6 +362,10 @@ def apply_preset(adb, values, on_item=None):
             result.failed.append((item.label, str(exc)))
             if on_item:
                 on_item(item, "failed", str(exc))
+            if item.id in ("picture_mode", "color_gains", "hdr_tone_mapping"):
+                result.skipped.extend((remaining.label, "原生写入未确认，停止写入画质参数")
+                                      for remaining in PICTURE_ITEMS[index + 1:])
+                break
             continue
         result.applied.append(item.label)
         warnings = receipt.get("warnings", []) if isinstance(receipt, dict) else []

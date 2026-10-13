@@ -27,13 +27,13 @@ class NativePictureReadTests(unittest.TestCase):
         self.assertEqual(values["picture_color_temperature"], 3)
         self.assertEqual(values["picture_mode"], 14)  # writable database enum is preserved
 
-    def test_unavailable_signal_clears_cached_native_state_and_uses_existing_scene(self):
+    def test_unavailable_signal_clears_cached_native_state_without_using_stale_database(self):
         values = {"g_video__picture_mode": 13, "g_dovi_info__": 1,
                   "picture_mode": 10, "picture_preset_scenario": 25}
         device_features.apply_picture_signal_reads(values, {"g_video__picture_mode": -1, "g_dovi_info__": "ERROR"})
         self.assertIsNone(values["g_video__picture_mode"])
         self.assertIsNone(values["g_dovi_info__"])
-        self.assertEqual(DisplayFeaturesMixin._active_picture_scene_mode(SimpleNamespace(current_vals=values)), 25)
+        self.assertIsNone(DisplayFeaturesMixin._active_picture_scene_mode(SimpleNamespace(current_vals=values)))
 
     def test_confirmed_dolby_does_not_borrow_a_stale_sdr_scene(self):
         values = {"g_video__picture_mode": None, "g_dovi_info__": 1,
@@ -127,6 +127,7 @@ class NativeActionResultTests(unittest.TestCase):
     def test_checked_action_uses_helper_class_and_cleans_its_own_result(self):
         target = adb_runtime.Adb("192.168.1.9")
         with mock.patch.object(target, "check_and_heal_jar"), \
+                mock.patch.object(target, "read_picture_state", return_value={"g_video__picture_mode": 16, "g_dovi_info__": 0}), \
                 mock.patch.object(target, "shell", side_effect=[tone_receipt(), ""]) as shell, \
                 mock.patch.object(adb_runtime.uuid, "uuid4", return_value=SimpleNamespace(hex="abc")):
             result = target.hdr_tone_mapping(5, check=True)
@@ -140,6 +141,7 @@ class NativeActionResultTests(unittest.TestCase):
     def test_checked_action_cleans_result_when_validation_fails(self):
         target = adb_runtime.Adb("192.168.1.9")
         with mock.patch.object(target, "check_and_heal_jar"), \
+                mock.patch.object(target, "read_picture_state", return_value={"g_video__picture_mode": 16, "g_dovi_info__": 0}), \
                 mock.patch.object(target, "shell", side_effect=[tone_receipt(readback=0), ""]) as shell:
             with self.assertRaises(RuntimeError):
                 target.hdr_tone_mapping(5, check=True)

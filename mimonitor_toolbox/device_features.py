@@ -68,11 +68,13 @@ def _native_int(value):
 
 
 def apply_picture_signal_reads(settings_vals, jni_batch_vals):
-    """原生场景/杜比状态只用于识别，不覆盖可写的 picture_mode。"""
+    """保留独立原生读数；0 是有效的 MTK 自定义模式。"""
     mode = _native_int(jni_batch_vals.get("g_video__picture_mode"))
     dovi = _native_int(jni_batch_vals.get("g_dovi_info__"))
-    settings_vals["g_video__picture_mode"] = mode if mode else None
+    settings_vals["g_video__picture_mode"] = mode
     settings_vals["g_dovi_info__"] = dovi if dovi in (0, 1) else None
+    settings_vals["g_video__vid_hdr_tone_mapping_mode"] = _native_int(
+        jni_batch_vals.get("g_video__vid_hdr_tone_mapping_mode"))
 
 
 def apply_picture_jni_overrides(settings_vals, jni_batch_vals):

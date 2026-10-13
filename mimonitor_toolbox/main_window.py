@@ -80,6 +80,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
     status_signal = pyqtSignal(str)
     values_signal = pyqtSignal(dict)
     jni_values_signal = pyqtSignal(dict)
+    picture_signal_read_finished = pyqtSignal(int, str, int, dict)
     devices_signal = pyqtSignal(int, list)
     scan_finished_signal = pyqtSignal(int, str, list, str)
     message_signal = pyqtSignal(str, str, str) # type, title, text
@@ -123,6 +124,7 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
         self.status_signal.connect(self._on_status)
         self.values_signal.connect(self._apply_polled_values)
         self.jni_values_signal.connect(self._apply_polled_jni_values)
+        self.picture_signal_read_finished.connect(self._on_picture_signal_read)
         self.devices_signal.connect(self._update_scanned_devices)
         self.scan_finished_signal.connect(self._finish_scan)
         self.message_signal.connect(self._show_message_box)

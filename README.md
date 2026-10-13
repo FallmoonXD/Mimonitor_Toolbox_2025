@@ -21,9 +21,11 @@
 
 ## 2025 款适配
 
-针对 2025 款的固件行为，改进了 Dolby Vision 场景识别、RGB 数值显示，以及画质操作的结果提示。
+显示模式按实际 SDR、HDR 或 Dolby Vision 信号提供选项，直接读取和调节显示器的原生数值。修正 HDR 色调映射的四档对应关系，并保留写入后的回读校验。
 
-目前以 **Windows 11 + 红米 G Pro 27U 2025 / OS3.0.109.0.UFFMAMN** 为验证环境。项目仍在开发，新增写入校验尚待实机验收；详细进度见 [兼容记录](docs/2025-compatibility.md)。
+切换 Windows 的 Dolby Vision 开关后，工具箱自动刷新信号和可选模式。杜比信号下使用杜比画面模式；HDR 色调映射在 HDR 输入时调节。
+
+已在 **Windows 11 + 红米 G Pro 27U 2025 / OS3.0.109.0.UFFMAMN** 上验证显示模式、HDR 色调映射和 Windows 杜比开关联动。其他操作的验证进度见 [兼容记录](docs/2025-compatibility.md)。
 
 ## 开始使用
 

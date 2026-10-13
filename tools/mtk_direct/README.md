@@ -18,12 +18,20 @@ make the firmware restore untouched channels to `1024`.
 
 Rebuild the bundled jar from `MtkDirectTool.java` after changing this source.
 
-For checked writes, `setColorGainsChecked <r> <g> <b> <expected-bank> <result-file>` and
+`getPictureState <result-file>` is getter-only. It reads the native picture mode,
+Dolby signal flag, and HDR tone, including scene/signal guards before and after.
+It uses a unique versioned result instead of the shared logcat or batch result.
+
+For checked writes, `setPictureModeChecked <native-mode> <update> <expected-bank> <result-file>`,
+`setColorGainsChecked <r> <g> <b> <expected-bank> <result-file>` and
 `setHdrToneMappingChecked <mtk> <update> <expected-bank> <result-file>` produce a versioned result
 in a unique `.mtk_action_<token>.txt` file. It contains the native return code,
 delayed native readback, scene before/after, and the separate Provider return for
 tone mapping. Python rejects failed setters, mismatched readbacks, and scene
-changes. A nonzero/missing Provider return is retained as a warning when native
+changes. Mode writes allow the requested bank change but require the same signal
+family and stable Dolby flag. HDR tone writes require a confirmed HDR family;
+Dolby and SDR are rejected before invoking the setter.
+A nonzero/missing Provider return is retained as a warning when native
 readback succeeds; observed 2025 firmware returns `-1` in this situation.
 Legacy commands retain their existing result format.
 An expected bank of `-1` preserves operation on firmware without a native scene
@@ -32,7 +40,8 @@ RGB also checks before changing custom color temperature.
 
 The 2025 `OS3.0.109.0.UFFMAMN` getter capture is covered by
 `tests/fixtures/redmi_2025_dolby_native.json`. Picture refresh and preset snapshots
-use native RGB/tone values; native scene and Dolby status are read-only metadata
-and are not substituted into the writable `picture_mode` setting. Missing native
-signal fields fall back to the existing database scene detection. Unknown tone
-values retain their raw value and clear the old preset-button highlight.
+use native RGB/tone values. Mode numbers are MTK numbers, not Xiaomi SceneMode
+numbers: native Dolby game is 13 and Dolby custom is 61. After a verified native
+mode write, Python synchronizes `picture_mode` and, for Dolby, `picture_mode_dolby`,
+then verifies the final native state. Unavailable native signal state disables
+mode writes. Unknown tone values retain their raw value and clear the old highlight.

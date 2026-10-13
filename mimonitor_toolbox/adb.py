@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import uuid
+from .picture_modes import picture_signal_family, validate_mode_target
 
 from .core import (
     MTK_BATCH_RESULT_FILE,
@@ -351,10 +352,19 @@ def parse_native_action_result(output, action, expected):
     except (KeyError, TypeError, ValueError):
         bank_before = bank_after = -1
     if bank_before >= 0 and bank_after >= 0:
-        if bank_before != bank_after:
+        if bank_before != bank_after and action != "setPictureMode":
             raise RuntimeError(f"写入期间原生场景变化：{bank_before} → {bank_after}")
     else:
         warnings.append("未取得原生场景，无法核验写入期间场景是否稳定")
+    if action == "setPictureMode" and bank_after != expected.get("g_video__picture_mode"):
+        raise RuntimeError("画面模式最终回读不一致")
+    if "dovi_before" in values or "dovi_after" in values:
+        try:
+            before, after = int(values["dovi_before"]), int(values["dovi_after"])
+        except (KeyError, TypeError, ValueError):
+            raise RuntimeError("未取得写入前后的杜比信号状态") from None
+        if before not in (0, 1) or after != before:
+            raise RuntimeError("写入期间杜比信号变化，请刷新后重试")
     provider_return = None
     if action == "setHdrToneMapping":
         try:
@@ -368,6 +378,28 @@ def parse_native_action_result(output, action, expected):
     return {"native_return": native_return, "native_verified": True,
             "provider_return": provider_return, "provider_error": values.get("provider_error"), "readback": readback,
             "bank_before": bank_before, "bank_after": bank_after, "warnings": warnings}
+
+
+def parse_native_picture_state(output):
+    values = dict(line.strip().split("=", 1) for line in output.splitlines() if "=" in line)
+    if (values.get("__version"), values.get("__action"), values.get("__complete")) != ("1", "getPictureState", "1"):
+        raise RuntimeError("原生画面状态不完整")
+    if "fatal" in values:
+        raise RuntimeError(f"读取原生画面状态失败：{values['fatal']}")
+    try:
+        mode = int(values["readback.g_video__picture_mode"])
+        dovi = int(values["readback.g_dovi_info__"])
+        tone = int(values["readback.g_video__vid_hdr_tone_mapping_mode"])
+        banks = (int(values["bank_before"]), int(values["bank_after"]))
+        dovis = (int(values["dovi_before"]), int(values["dovi_after"]))
+    except (KeyError, TypeError, ValueError):
+        raise RuntimeError("原生画面状态包含不可读字段") from None
+    if mode < 0 or tone < 0 or dovi not in (0, 1):
+        raise RuntimeError("未取得有效的原生画面状态")
+    if banks != (mode, mode) or dovis != (dovi, dovi):
+        raise RuntimeError("读取期间输入信号发生变化，请稍后刷新")
+    return {"g_video__picture_mode": mode, "g_dovi_info__": dovi,
+            "g_video__vid_hdr_tone_mapping_mode": tone}
 
 
 class Adb:
@@ -486,8 +518,13 @@ class Adb:
     def hdr_tone_mapping(self, val, upd=3, check=False, expected_bank=None):
         _adb_log(f"hdr_tone_mapping = {val}")
         if check:
+            state = self.read_picture_state()
+            if picture_signal_family(state["g_video__picture_mode"], state["g_dovi_info__"]) != "HDR":
+                raise RuntimeError("HDR 色调映射仅在 HDR 输入下调节；杜比输入请使用 Dolby Vision 画面模式")
+            if expected_bank is not None and state["g_video__picture_mode"] != int(expected_bank):
+                raise RuntimeError("画面场景已变化，请刷新后重试")
             return self._checked_native_action("setHdrToneMapping", [val, upd],
-                {"g_video__vid_hdr_tone_mapping_mode": val}, expected_bank=expected_bank)
+                {"g_video__vid_hdr_tone_mapping_mode": val}, expected_bank=state["g_video__picture_mode"])
         jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
         command = build_tvservice_app_process_command(
             jar, ["MtkDirectTool", "setHdrToneMapping", val, upd]
@@ -515,14 +552,41 @@ class Adb:
                 raise RuntimeError(f"画面场景已变化或无法确认：目标 {expected_bank}，实际 {actual}；停止写入")
             time.sleep(0.1)
 
+    def read_picture_state(self):
+        return self._native_helper_result("getPictureState", [], parse_native_picture_state)
+
+    def picture_mode(self, value, upd=3, check=True, expected_bank=None):
+        if not check:
+            raise ValueError("画面模式必须验收原生回读")
+        with self.transaction():
+            state = self.read_picture_state()
+            bank, dovi = state["g_video__picture_mode"], state["g_dovi_info__"]
+            if expected_bank is not None and bank != int(expected_bank):
+                raise RuntimeError("画面场景已变化，请刷新后重试")
+            value = validate_mode_target(value, bank, dovi)
+            result = self._checked_native_action("setPictureMode", [value, upd],
+                {"g_video__picture_mode": value}, expected_bank=bank)
+            self.put("picture_mode", str(value), check=True)
+            if dovi == 1:
+                self.put("picture_mode_dolby", str(value), check=True)
+            actual = self.read_picture_state()
+            if actual["g_video__picture_mode"] != value or actual["g_dovi_info__"] != dovi:
+                raise RuntimeError("同步数据库后输入或画面模式变化，未确认最终生效值")
+            result["state"] = actual
+            return result
+
     def _checked_native_action(self, action, arguments, expected, expected_bank=None):
+        arguments = list(arguments) + [int(expected_bank) if expected_bank is not None else -1]
+        return self._native_helper_result(action + "Checked", arguments,
+            lambda output: parse_native_action_result(output, action, expected))
+
+    def _native_helper_result(self, command_action, arguments, parser):
         result_file = f"/sdcard/Download/Mimonitor_Toolbox/.mtk_action_{uuid.uuid4().hex}.txt"
         with self.transaction():
             self.check_and_heal_jar()
             command = build_tvservice_app_process_command(
                 "/data/data/mitv.service/cache/MtkDirectTool.jar",
-                ["MtkDirectTool", action + "Checked"] + arguments +
-                [int(expected_bank) if expected_bank is not None else -1, result_file],
+                ["MtkDirectTool", command_action] + list(arguments) + [result_file],
             )
             try:
                 output = self.shell(
@@ -531,8 +595,8 @@ class Adb:
                     f"i=0; while [ $i -lt 30 ] && [ ! -f {result_file} ]; do sleep 0.1; i=$((i+1)); done; "
                     f"cat {result_file} 2>/dev/null", check=True,
                 )
-                result = parse_native_action_result(output, action, expected)
-                _adb_log(f"{action} verified: {result}")
+                result = parser(output)
+                _adb_log(f"{command_action} verified: {result}")
                 return result
             finally:
                 self.shell(f"rm -f {result_file}")

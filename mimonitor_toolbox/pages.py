@@ -59,6 +59,7 @@ from .core import (
     update_settings,
 )
 from .network_scan import enumerate_windows_adapter_addresses
+from .picture_modes import NATIVE_MODE_CHOICES
 from .presets import BASELINE_PRESET_ID, find_preset, new_id, unique_name
 from .windows import list_windows_displays
 from .widgets import (
@@ -291,35 +292,43 @@ class PagesMixin:
         lf = SimpleCardWidget(container)
         lf_layout = QVBoxLayout(lf)
         lf_layout.setContentsMargins(15, 15, 15, 15)
-        lf_layout.addWidget(BodyLabel("画面模式", lf))
+        mode_title_row = QHBoxLayout()
+        mode_title_row.addWidget(BodyLabel("画面模式", lf))
+        self.picture_signal_label = BodyLabel("当前信号：未刷新", lf)
+        mode_title_row.addWidget(self.picture_signal_label)
+        mode_title_row.addStretch(1)
+        lf_layout.addLayout(mode_title_row)
         
         h = QHBoxLayout()
         h.setSpacing(10)
         h.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        for val, name in [(14, "标准"), (10, "游戏"), (9, "电影")]:
+        for val, name in [choice for choices in NATIVE_MODE_CHOICES.values() for choice in choices]:
             b = ToggleButton(name, lf)
             b.setCheckable(True)
             b.setFixedWidth(100)
             b.clicked.connect(lambda checked=False, v=val, n=name: self._set_mode(v, n))
             h.addWidget(b)
             self.mode_btns[val] = b
+            b.setVisible(False)
         h.addSpacing(20)
         reset_mode_btn = PushButton("恢复默认", lf)
         reset_mode_btn.setFixedWidth(100)
         reset_mode_btn.clicked.connect(self._reset_current_mode)
         h.addWidget(reset_mode_btn)
-        self.picture_mode_hint_label = BodyLabel("当前场景：未刷新", lf)
-
-        h.addWidget(self.picture_mode_hint_label)
         h.addStretch(1)
-        # 自动调整亮度（光感）：开关控件放这一行，状态由 MTK 侧读数同步
-        h.addWidget(BodyLabel("自动调整亮度", lf))
+        lf_layout.addLayout(h)
+        self.picture_mode_hint_label = BodyLabel("当前场景：未刷新", lf)
+        detail_row = QHBoxLayout()
+        detail_row.addWidget(self.picture_mode_hint_label)
+        detail_row.addStretch(1)
+        # 状态与光感开关单独成行，给当前信号的模式按钮留出宽度。
+        detail_row.addWidget(BodyLabel("自动调整亮度", lf))
         self.light_sensor_switch = SwitchButton(lf)
         self.light_sensor_switch.setOnText("开")
         self.light_sensor_switch.setOffText("关")
         self.light_sensor_switch.checkedChanged.connect(self._set_light_sensor)
-        h.addWidget(self.light_sensor_switch)
-        lf_layout.addLayout(h)
+        detail_row.addWidget(self.light_sensor_switch)
+        lf_layout.addLayout(detail_row)
         layout.addWidget(lf)
 
         # Sliders
@@ -350,11 +359,13 @@ class PagesMixin:
         ], state_key="picture_local_dimming")
 
         self.hdr_tone_mapping_card = self._btn_section(layout, "HDR 色调映射", [
-            ("HGiG", 0, lambda _: self._set_hdr_tone_mapping(0, "HGiG")),
-            ("层次", 1, lambda _: self._set_hdr_tone_mapping(1, "层次")),
-            ("动态", 2, lambda _: self._set_hdr_tone_mapping(2, "动态")),
-            ("明亮", 3, lambda _: self._set_hdr_tone_mapping(3, "明亮")),
-        ], state_key="settings_display_hdr_color_tone")
+            ("HGiG", 5, lambda _: self._set_native_hdr_tone_mapping(5, "HGiG")),
+            ("层次", 0, lambda _: self._set_native_hdr_tone_mapping(0, "层次")),
+            ("动态", 2, lambda _: self._set_native_hdr_tone_mapping(2, "动态")),
+            ("明亮", 1, lambda _: self._set_native_hdr_tone_mapping(1, "明亮")),
+        ], state_key="g_video__vid_hdr_tone_mapping_mode")
+        self.hdr_tone_mapping_status = BodyLabel("", self.hdr_tone_mapping_card)
+        self.hdr_tone_mapping_card.layout().addWidget(self.hdr_tone_mapping_status)
         self._update_hdr_tone_mapping_visibility()
 
         self._btn_section(layout, "动态清晰度", [

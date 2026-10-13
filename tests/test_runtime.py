@@ -851,6 +851,11 @@ class StateMachineTests(unittest.TestCase):
             def put(self, key, value, check=False):
                 commands.append((key, value, check))
 
+            def picture_mode(self, value, check=True):
+                commands.append(("native_picture_mode", value, check))
+                self.put("picture_mode", str(value), check)
+                return {"state": {"g_video__picture_mode": value, "g_dovi_info__": 0}}
+
         class FakeApp:
             adb = FakeAdb()
             current_vals = {"picture_mode": 14, "mt_game_scope": 0}
@@ -889,6 +894,7 @@ class StateMachineTests(unittest.TestCase):
 
         self.assertEqual(commands, [
             ("mt_game_scope", "5", True),
+            ("native_picture_mode", 10, True),
             ("picture_mode", "10", True),
         ])
         self.assertEqual(fake.current_vals["mt_game_scope"], 5)
@@ -1182,6 +1188,11 @@ class StateMachineTests(unittest.TestCase):
 
             def hdr_tone_mapping(self, value, check=False):
                 calls.append(("hdr_tone", value, check))
+                self.tone = value
+
+            def read_picture_state(self):
+                return {"g_video__picture_mode": 16, "g_dovi_info__": 0,
+                        "g_video__vid_hdr_tone_mapping_mode": self.tone}
 
             def put(self, key, value, check=False):
                 calls.append(("put", key, value, check))
@@ -1374,7 +1385,8 @@ class StateMachineTests(unittest.TestCase):
             app.App._refresh_page_data(FakeApp(), "picturePage")
 
         self.assertEqual(FakeApp.adb.depth, 0)
-        self.assertIn(("values", ({"picture_mode": 2, "g_video__picture_mode": None, "g_dovi_info__": None},)), emitted)
+        self.assertIn(("values", ({"picture_mode": 2, "g_video__picture_mode": None, "g_dovi_info__": None,
+                                   "g_video__vid_hdr_tone_mapping_mode": None},)), emitted)
         self.assertIn(("jni", ({"g_disp__disp_back_light": 40},)), emitted)
         self.assertIn(("finished", ("picturePage", True)), emitted)
 

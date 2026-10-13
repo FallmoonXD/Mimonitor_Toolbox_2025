@@ -12,6 +12,7 @@ from .core import (
     ADJUSTABLE_HOTKEY_PARAMS,
     CUSTOM_COLOR_TEMP_VALUE,
     HDR_TONE_MAPPING_UI_TO_MTK,
+    HDR_TONE_MAPPING_MTK_TO_UI,
     LOCAL_DIMMING_NAMES,
     PICTURE_MODE_GROUPS,
     PICTURE_SCENE_NAMES,
@@ -33,6 +34,10 @@ from .presets import (
 )
 from .widgets import LoadingSpinner, OverlayResizeFilter
 from .windows import query_windows_hdr_enabled, resolve_hdr_target_display
+from .picture_modes import (
+    DOLBY_NATIVE_MODES, NATIVE_MODE_CHOICES, native_mode_group,
+    picture_mode_choices, picture_signal_family,
+)
 
 _preset_overlay_filter = None
 
@@ -105,8 +110,10 @@ class DisplayFeaturesMixin:
         """
         return {
             "picture_mode": (
-                "picture_mode",
-                [(14, "标准"), (10, "游戏"), (9, "电影")],
+                "g_video__picture_mode" if getattr(self, "current_vals", {}).get("g_video__picture_mode") is not None else "picture_mode",
+                list(picture_mode_choices(DisplayFeaturesMixin._active_picture_scene_mode(self),
+                    getattr(self, "current_vals", {}).get("g_dovi_info__"))) or (
+                    list(NATIVE_MODE_CHOICES["SDR"]) if "g_video__picture_mode" not in getattr(self, "current_vals", {}) else []),
                 "画面模式",
                 lambda val, name: self._set_mode(val, name)
             ),
@@ -242,8 +249,13 @@ class DisplayFeaturesMixin:
         self._stage_cycle_hotkey_action(action, *actions_map[action])
 
     def _stage_cycle_hotkey_action(self, action, sk, state_tuples, label_name, exec_fn):
+        if not state_tuples:
+            self.log("输入信号未确认，无法切换画面模式")
+            return
         pending = self._cycle_hotkey_pending.get(action)
         curr_val = pending.get("value") if pending else getattr(self, "current_vals", {}).get(sk, state_tuples[0][0])
+        if action == "picture_mode_cycle":
+            curr_val = native_mode_group(curr_val)
         original_value = pending.get("original") if pending else curr_val
 
         curr_idx = -1
@@ -285,10 +297,10 @@ class DisplayFeaturesMixin:
         timer.start()
 
     def _preview_cycle_hotkey_value(self, sk, value):
-        self.current_vals[sk] = value
-        if sk == "picture_mode":
+        if sk in ("picture_mode", "g_video__picture_mode"):
             self._highlight_mode(value)
             return
+        self.current_vals[sk] = value
         if sk == "freesync":
             self.jni_values_signal.emit({sk: value})
             return
@@ -1179,7 +1191,7 @@ class DisplayFeaturesMixin:
     def _remember_freesync_previous_mode(self):
         """记录 FreeSync 开启前的画面模式（开启后显示器会自动切到游戏模式）"""
         try:
-            mode = int(self.current_vals.get("picture_mode"))
+            mode = int(DisplayFeaturesMixin._active_picture_scene_mode(self))
         except (TypeError, ValueError):
             return
         update_settings({"freesync_previous_mode": mode})
@@ -1288,7 +1300,7 @@ class DisplayFeaturesMixin:
         if getattr(self, "_crosshair_reconcile_busy", False):
             return
         current_vals = getattr(self, "current_vals", {})
-        mode = current_vals.get("picture_mode")
+        mode = DisplayFeaturesMixin._active_picture_scene_mode(self)
         if mode in (None, "", "null", "N/A"):
             return
         crosshair = self._crosshair_value_from_vals()
@@ -1392,6 +1404,7 @@ class DisplayFeaturesMixin:
         self._schedule_hdr_memory_check("切换目标显示器", delay_ms=80)
 
     def _poll_hdr_memory_state(self, reason="timer"):
+        DisplayFeaturesMixin._poll_picture_signal(self)
         visible_interval = 3000
         background_interval = 8000
         target_interval = visible_interval if self.isVisible() and not self.isMinimized() else background_interval
@@ -1406,6 +1419,55 @@ class DisplayFeaturesMixin:
             self._update_hdr_memory_status_label("Windows HDR 状态未知")
             return
         self._on_hdr_memory_state_detected(win_state, "Windows HDR")
+
+    def _poll_picture_signal(self):
+        if getattr(self, "picture_signal_read_finished", None) is None:
+            return
+        if (not getattr(self, "adb_connected", False) or getattr(self, "_cleanup_done", False)
+                or getattr(self, "_windows_session_ending", False)
+                or getattr(self, "_picture_signal_inflight", None) is not None
+                or self._adb_channel_busy() or getattr(self, "_page_loading", set())):
+            return
+        generation = getattr(self, "_connection_intent_generation", 0)
+        ip = str(self.adb.ip or "").strip()
+        if not ip:
+            return
+        seq = getattr(self, "_picture_mode_switch_seq", 0)
+        self._picture_signal_inflight = (generation, ip, seq)
+
+        def read():
+            try:
+                values = self.adb.read_picture_state()
+            except Exception as error:
+                values = {"error": str(error)}
+            self.picture_signal_read_finished.emit(generation, ip, seq, values)
+
+        async_run(read)
+
+    def _on_picture_signal_read(self, generation, ip, seq, values):
+        if getattr(self, "_picture_signal_inflight", None) == (generation, ip, seq):
+            self._picture_signal_inflight = None
+        if (not getattr(self, "adb_connected", False)
+                or not self._connection_intent_is_current(generation, ip)
+                or seq != getattr(self, "_picture_mode_switch_seq", 0)):
+            return
+        previous = (self.current_vals.get("g_video__picture_mode"), self.current_vals.get("g_dovi_info__"))
+        if "error" in values:
+            values = {"g_video__picture_mode": None, "g_dovi_info__": None,
+                      "g_video__vid_hdr_tone_mapping_mode": None}
+        self._apply_polled_values(values)
+        current = (values.get("g_video__picture_mode"), values.get("g_dovi_info__"))
+        if current != previous:
+            self._picture_mode_switch_seq += 1
+            self._page_loaded.discard("picturePage")
+            pending = getattr(self, "_cycle_hotkey_pending", {}).pop("picture_mode_cycle", None)
+            timer = getattr(self, "_cycle_hotkey_timers", {}).get("picture_mode_cycle")
+            if pending and timer:
+                timer.stop()
+            if current[0] is not None:
+                family = picture_signal_family(*current) or "未知"
+                self.log(f"检测到显示器信号或模式变化：{family}，刷新画面数据")
+                QTimer.singleShot(0, self._refresh_picture_data_after_hdr_change)
 
     def _on_hdr_memory_state_detected(self, state, source):
         if state is None:
@@ -1697,6 +1759,7 @@ class DisplayFeaturesMixin:
                 btn.setStyleSheet("")
 
     def _highlight_mode(self, mode):
+        DisplayFeaturesMixin._sync_picture_mode_options(self, mode)
         try:
             mode_int = int(mode)
         except Exception:
@@ -1709,7 +1772,7 @@ class DisplayFeaturesMixin:
         self._update_freesync_memory_status_label()
 
     def _picture_mode_group_name(self, mode):
-        for primary, name in ((14, "标准"), (10, "游戏"), (9, "电影")):
+        for primary, name in ((14, "标准"), (10, "游戏"), (9, "电影"), (16, "HDR 游戏"), (18, "HDR 显示器")):
             if mode in PICTURE_MODE_GROUPS.get(primary, {primary}):
                 return name
         return None
@@ -1720,10 +1783,17 @@ class DisplayFeaturesMixin:
             native_mode = int(current_vals.get("g_video__picture_mode"))
         except (TypeError, ValueError):
             native_mode = 0
+        if "g_video__picture_mode" in current_vals:
+            try:
+                native_mode = int(current_vals["g_video__picture_mode"])
+            except (TypeError, ValueError):
+                return None
+            if native_mode < 0:
+                return None
         if str(current_vals.get("g_dovi_info__")) == "1":
             # 杜比信号已确认，但场景读取失败时不借用数据库中的 SDR/HDR 场景。
-            return native_mode if native_mode in (11, 12, 13, 18, 19) else None
-        if native_mode > 0:
+            return native_mode if native_mode in DOLBY_NATIVE_MODES else None
+        if "g_video__picture_mode" in current_vals:
             return native_mode
         try:
             scenario = int(current_vals.get("picture_preset_scenario"))
@@ -1737,11 +1807,17 @@ class DisplayFeaturesMixin:
             return scenario
 
     def _is_game_mode_active(self):
-        current_vals = getattr(self, "current_vals", {})
-        return any(
-            is_game_picture_mode(current_vals.get(key))
-            for key in ("picture_mode", "picture_preset_scenario")
-        )
+        return is_game_picture_mode(DisplayFeaturesMixin._active_picture_scene_mode(self))
+
+    def _sync_picture_mode_options(self, mode):
+        dovi = getattr(self, "current_vals", {}).get("g_dovi_info__")
+        choices = dict(picture_mode_choices(mode, dovi))
+        for value, button in getattr(self, "mode_btns", {}).items():
+            button.setVisible(value in choices)
+            button.setEnabled(value in choices)
+        label = getattr(self, "picture_signal_label", None)
+        if label:
+            label.setText(f"当前信号：{picture_signal_family(mode, dovi) or '未知'}")
 
     def _update_game_mode_hint(self):
         label = getattr(self, "game_mode_hint_label", None)
@@ -1752,6 +1828,8 @@ class DisplayFeaturesMixin:
             current_vals.get(key) not in (None, "", "null", "N/A")
             for key in ("picture_mode", "picture_preset_scenario")
         )
+        if "g_video__picture_mode" in current_vals:
+            mode_known = DisplayFeaturesMixin._active_picture_scene_mode(self) is not None
         if not mode_known:
             label.setText("当前画面模式未知；高亮值尚未确认是否生效。")
             label.setStyleSheet("color: #f0b85a; font-size: 12px;")
@@ -1768,9 +1846,24 @@ class DisplayFeaturesMixin:
             return
         if mode is None:
             mode = DisplayFeaturesMixin._active_picture_scene_mode(self)
-        visible = is_hdr_tone_mapping_picture_mode(mode)
+        values = getattr(self, "current_vals", {})
+        family = picture_signal_family(mode, values.get("g_dovi_info__"))
+        visible = family in ("HDR", "Dolby Vision")
         card.setVisible(visible)
-        if str(getattr(self, "current_vals", {}).get("g_dovi_info__")) == "1":
+        raw = values.get("g_video__vid_hdr_tone_mapping_mode")
+        for value, button in getattr(self, "state_buttons", {}).get("g_video__vid_hdr_tone_mapping_mode", {}).items():
+            button.setEnabled(family == "HDR" and raw is not None)
+            self._highlight_btn(button, family == "HDR" and raw is not None and str(raw) == str(value))
+        status = getattr(self, "hdr_tone_mapping_status", None)
+        if status:
+            if family == "Dolby Vision":
+                status.setText("当前为 Dolby Vision；HDR 策略在 HDR 输入时调节")
+            elif raw is None:
+                status.setText("未取得当前策略")
+            else:
+                status.setText("未知策略" if raw not in HDR_TONE_MAPPING_MTK_TO_UI else "")
+            status.setToolTip(f"原生 HDR tone 值：{raw}")
+        if family == "Dolby Vision":
             card.setToolTip("已确认杜比信号；此处回读的是 HDR 色调映射配置，不能据此判断杜比算法。")
         else:
             card.setToolTip("")
@@ -1800,12 +1893,6 @@ class DisplayFeaturesMixin:
             label.setStyleSheet("color: #f0b85a; font-size: 12px;")
             return
 
-        group_name = self._picture_mode_group_name(mode_int)
-        if group_name:
-            label.setText(f"当前场景：{group_name}（{mode_int}）")
-            FluentStyleSheet.LABEL.apply(label)
-            return
-
         scene_name = PICTURE_SCENE_NAMES.get(mode_int)
         if scene_name:
             label.setText(f"当前场景：{scene_name}")
@@ -1819,13 +1906,17 @@ class DisplayFeaturesMixin:
         self._mark_adb_busy(3.0)
         self._picture_mode_switch_seq += 1
         seq = self._picture_mode_switch_seq
-        previous = self._take_control_previous("picture_mode")
+        self._take_control_previous("picture_mode")
+        getattr(self, "_control_rollback_values", {}).pop("g_video__picture_mode", None)
+        expected_bank = self.current_vals.get("g_video__picture_mode")
+        result = {}
 
         def operation():
-            self.adb.put("picture_mode", str(val), check=True)
+            result.update(self.adb.picture_mode(val, check=True, expected_bank=expected_bank))
 
         def success():
             self._note_picture_change()
+            self.current_vals.update(result["state"])
             self.current_vals["picture_mode"] = val
             self._highlight_mode(val)
             self.log(f"模式: {name}")
@@ -1834,9 +1925,9 @@ class DisplayFeaturesMixin:
             QTimer.singleShot(1200, lambda seq=seq, val=val: self._refresh_picture_page_after_mode_switch(seq, val))
 
         def failure():
-            if previous is not None:
-                self.current_vals["picture_mode"] = previous
-                self._highlight_mode(previous)
+            self.current_vals["g_video__picture_mode"] = None
+            self._highlight_mode(None)
+            QTimer.singleShot(300, lambda: self._refresh_page_data("picturePage"))
 
         self._run_adb_action("画面模式", operation, success, failure)
 
@@ -1855,11 +1946,11 @@ class DisplayFeaturesMixin:
 
     def _reset_current_mode(self):
         if not self.check_connection(): return
-        cur = self.current_vals.get("picture_mode")
-        if cur not in self._MODE_NAMES:
+        cur = self._active_picture_scene_mode()
+        if cur not in PICTURE_SCENE_NAMES:
             self.log("无法获取当前模式")
             return
-        mode_name = self._MODE_NAMES[cur]
+        mode_name = PICTURE_SCENE_NAMES[cur]
         w = MessageBox("恢复默认设置", f"你确定要恢复当前模式：{mode_name} 的默认设置吗？", self)
         accepted = w.exec()
         w.deleteLater()
@@ -1947,6 +2038,14 @@ class DisplayFeaturesMixin:
         previous_values = {key: previous}
         game_mode_active = DisplayFeaturesMixin._is_game_mode_active(self)
         switch_to_game = value != 0 and not game_mode_active
+        active_mode = DisplayFeaturesMixin._active_picture_scene_mode(self)
+        family = picture_signal_family(active_mode, self.current_vals.get("g_dovi_info__"))
+        game_mode = {"SDR": 10, "HDR": 16, "Dolby Vision": 13}.get(family)
+        normal_mode = {"SDR": 14, "HDR": 15, "Dolby Vision": 61}.get(family)
+        mode_result = {}
+        if (switch_to_game or retrigger_game_mode) and game_mode is None:
+            self.log("输入信号未确认，无法切换游戏模式")
+            return
         feature_name = message.split(":", 1)[0]
         if switch_to_game:
             if not DisplayFeaturesMixin._confirm_switch_to_game_mode(self, feature_name):
@@ -1980,22 +2079,24 @@ class DisplayFeaturesMixin:
                 for setting, setting_value in updates.items():
                     self.adb.put(setting, str(setting_value), check=True)
                 if switch_to_game:
-                    self.adb.put("picture_mode", "10", check=True)
+                    mode_result.update(self.adb.picture_mode(game_mode, check=True))
                 elif retrigger_game_mode and game_mode_active:
-                    self.adb.put("picture_mode", "14", check=True)
+                    self.adb.picture_mode(normal_mode, check=True)
                     time.sleep(0.5)
-                    self.adb.put("picture_mode", "10", check=True)
+                    mode_result.update(self.adb.picture_mode(active_mode, check=True))
                 else:
                     self.adb.refresh_pq(check=True)
 
         def success():
             self.current_vals.update(updates)
+            if mode_result:
+                self.current_vals.update(mode_result["state"])
+                self.current_vals["picture_mode"] = mode_result["state"]["g_video__picture_mode"]
             for setting, setting_value in updates.items():
                 self._optimistic_highlight(setting, setting_value)
             self.log(message)
             if switch_to_game:
-                self.current_vals["picture_mode"] = 10
-                self._highlight_mode(10)
+                self._highlight_mode(game_mode)
                 self._update_game_mode_hint()
                 self.log("已切换到游戏模式")
                 self._refresh_pages(("picturePage", "gamePage"), delay_ms=1200, force=True)
@@ -2040,10 +2141,15 @@ class DisplayFeaturesMixin:
         self._run_adb_action(m.split(":", 1)[0], operation, success, failure)
 
     def _set_hdr_tone_mapping(self, ui_value, name):
+        value = HDR_TONE_MAPPING_UI_TO_MTK.get(ui_value)
+        if value is not None:
+            return DisplayFeaturesMixin._set_native_hdr_tone_mapping(self, value, name)
+
+    def _set_native_hdr_tone_mapping(self, mtk_value, name):
         if not self.check_connection():
             return
-        mtk_value = HDR_TONE_MAPPING_UI_TO_MTK.get(ui_value)
-        if mtk_value is None:
+        ui_value = HDR_TONE_MAPPING_MTK_TO_UI.get(mtk_value)
+        if ui_value is None:
             return
 
         self._mark_adb_busy(2.5)
@@ -2063,20 +2169,32 @@ class DisplayFeaturesMixin:
                 self.adb.put(state_key, str(ui_value), check=True)
                 self.adb.refresh_pq(check=True)
 
+                actual = self.adb.read_picture_state()
+                if actual["g_video__vid_hdr_tone_mapping_mode"] != mtk_value or (
+                    expected_bank is not None and actual["g_video__picture_mode"] != expected_bank
+                ) or picture_signal_family(actual["g_video__picture_mode"], actual["g_dovi_info__"]) != "HDR":
+                    raise RuntimeError("色调映射最终回读不一致或输入已变化")
+                receipt["state"] = actual
+
         def success():
             self._note_picture_change()
             self.log(f"HDR 色调映射: {name}")
             for warning in receipt.get("warnings", []):
                 self.log(f"HDR 色调映射警告：{warning}")
             self.current_vals["picture_hdr_tone_mapping"] = mtk_value
+            self.current_vals.update(receipt["state"])
             self.current_vals[state_key] = ui_value
             self._optimistic_highlight(state_key, ui_value)
+            self._optimistic_highlight("g_video__vid_hdr_tone_mapping_mode", mtk_value)
+            DisplayFeaturesMixin._update_hdr_tone_mapping_visibility(self)
 
         def failure():
             if previous is not None:
                 self.current_vals[state_key] = previous
                 self._optimistic_highlight(state_key, previous)
             refresh = getattr(self, "_refresh_page_data", None)
+            self.current_vals["g_video__vid_hdr_tone_mapping_mode"] = None
+            self._optimistic_highlight("g_video__vid_hdr_tone_mapping_mode", None)
             if callable(refresh):
                 QTimer.singleShot(300, lambda: refresh("picturePage"))
 
@@ -2247,7 +2365,7 @@ class DisplayFeaturesMixin:
                 else: self.adb.jni_set("g_video__freesync_switch", 3 if on else 0, check=True)
                 # 关闭 FreeSync 且开启模式记忆：先切回开启前的画面模式，再刷新数据（切换早于刷新）
                 if not on and restore_mode is not None:
-                    self.adb.put("picture_mode", str(restore_mode), check=True)
+                    self.adb.picture_mode(restore_mode, check=True)
                 self.adb.refresh_pq(check=True)
 
         def success():

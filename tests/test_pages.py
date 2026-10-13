@@ -210,9 +210,9 @@ class PageContractTests(unittest.TestCase):
             "picture_mode": 13,
         })
 
-        self.assertEqual(window.picture_mode_hint_label.text(), "当前场景：Dolby Vision 自定义")
+        self.assertEqual(window.picture_mode_hint_label.text(), "当前场景：Dolby Vision 游戏")
         self.assertIn("FluentLabelBase", window.picture_mode_hint_label.styleSheet())
-        self.assertTrue(all(not button.isChecked() for button in window.mode_btns.values()))
+        self.assertTrue(window.mode_btns[13].isChecked())
         self.assertFalse(window.hdr_tone_mapping_card.isHidden())
         window._cleanup_done = True
         window.deleteLater()
@@ -230,12 +230,12 @@ class PageContractTests(unittest.TestCase):
             "g_video__picture_mode": 13, "g_dovi_info__": 1,
             "picture_hdr_tone_mapping": 0, "settings_display_hdr_color_tone": 1,
         })
-        self.assertEqual(window.picture_mode_hint_label.text(), "当前场景：Dolby Vision 自定义")
+        self.assertEqual(window.picture_mode_hint_label.text(), "当前场景：Dolby Vision 游戏")
         self.assertIn("杜比信号已确认", window.picture_mode_hint_label.toolTip())
         self.assertIn("不能据此判断杜比算法", window.hdr_tone_mapping_card.toolTip())
-        self.assertTrue(all(not button.isChecked() for button in window.mode_btns.values()))
+        self.assertTrue(window.mode_btns[13].isChecked())
         window._apply_polled_values({"picture_hdr_tone_mapping": 4, "settings_display_hdr_color_tone": None})
-        self.assertTrue(all(not button.isChecked() for button in window.state_buttons["settings_display_hdr_color_tone"].values()))
+        self.assertTrue(all(not button.isChecked() for button in window.state_buttons["g_video__vid_hdr_tone_mapping_mode"].values()))
         window._cleanup_done = True
         window.deleteLater()
         _qt_application.processEvents()
@@ -602,7 +602,7 @@ class TrayMenuTests(TrayTestBase):
 
         # 取值型：打勾列表
         option_items = submenus[0].menuActions()
-        self.assertEqual([a.text() for a in option_items], ["标准", "游戏", "电影"])
+        self.assertEqual([a.text() for a in option_items], ["标准", "游戏", "电影", "自定义"])
         self.assertTrue(next(a for a in option_items if a.text() == "游戏").isChecked())
 
         # 数值型：一张浮条卡片，数值显示在父菜单那一行上

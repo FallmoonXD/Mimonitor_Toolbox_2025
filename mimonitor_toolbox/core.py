@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 import threading
+from .picture_modes import NATIVE_MODE_GROUPS, NATIVE_MODE_NAMES, HDR_NATIVE_MODES
 
 _settings_lock = threading.RLock()
 
@@ -259,18 +260,11 @@ ADJUSTABLE_HOTKEY_PARAMS = {
         "min": 1, "max": 15, "step": 1, "ui_offset": 1, "screen_light": True,
     },
 }
-PICTURE_MODE_GROUPS = {
-    14: {14, 64, 65, 66, 67, 68},
-    10: {10, 25, 26, 27, 28, 29},
-    9: {9},
-}
+PICTURE_MODE_GROUPS = NATIVE_MODE_GROUPS
 GAME_FEATURE_KEYS = (
-    "front_sight_index",
-    "mt_game_dynamic_ft",
-    "mt_game_scope",
-    "mt_game_scope_night",
+    "front_sight_index", "mt_game_dynamic_ft", "mt_game_scope", "mt_game_scope_night",
 )
-GAME_PICTURE_MODES = frozenset(PICTURE_MODE_GROUPS[10]) | {4, 15, 19}
+GAME_PICTURE_MODES = frozenset(PICTURE_MODE_GROUPS[10]) | frozenset(PICTURE_MODE_GROUPS[16]) | {13}
 
 
 def is_game_picture_mode(value):
@@ -280,54 +274,9 @@ def is_game_picture_mode(value):
         return False
 
 
-PICTURE_SCENE_NAMES = {
-    9: "电影",
-    10: "游戏",
-    11: "Dolby Vision 明亮",
-    12: "Dolby Vision 暗场",
-    13: "Dolby Vision 自定义",
-    14: "标准",
-    15: "HDR 游戏",
-    16: "HDR 图片",
-    17: "HDR 电影",
-    18: "Dolby Vision IQ",
-    19: "Dolby Vision 游戏",
-    21: "Filmmaker",
-    22: "HDR 显示器",
-    23: "HDR Filmmaker",
-    24: "SDR 游戏 FPS",
-    25: "SDR 游戏 RPG",
-    26: "SDR 游戏 RTS",
-    27: "SDR 游戏 MOBA",
-    28: "SDR 游戏 SPT",
-    29: "HDR 游戏 FPS",
-    30: "HDR 游戏 RPG",
-    31: "HDR 游戏 RTS",
-    32: "HDR 游戏 MOBA",
-    33: "HDR 游戏 SPT",
-    34: "SDR PC AdobeRGB",
-    35: "SDR PC DCI-P3",
-    36: "SDR PC CG",
-    37: "SDR PC 暗房",
-    38: "SDR PC sRGB",
-    39: "HDR PC AdobeRGB",
-    40: "HDR PC DCI-P3",
-    41: "HDR PC CG",
-    42: "HDR PC 暗房",
-    43: "HDR PC sRGB",
-    44: "HDR Vivid",
-    64: "标准预设",
-    65: "标准预设",
-    66: "标准预设",
-    67: "标准预设",
-    68: "标准预设",
-}
-HDR_TONE_MAPPING_PICTURE_MODES = {
-    11, 12, 13, 15, 16, 17, 18, 19,
-    22, 23,
-    29, 30, 31, 32, 33,
-    39, 40, 41, 42, 43, 44,
-}
+PICTURE_SCENE_NAMES = NATIVE_MODE_NAMES
+HDR_TONE_MAPPING_PICTURE_MODES = HDR_NATIVE_MODES
+
 
 def is_hdr_tone_mapping_picture_mode(mode):
     try:

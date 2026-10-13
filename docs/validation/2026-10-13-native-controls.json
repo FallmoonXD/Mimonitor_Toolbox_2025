@@ -1,0 +1,167 @@
+{
+  "date": "2026-10-13",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "device": "Redmi G Pro 27U 2025 / XMI27B3 / MiTV-MFFU1",
+  "helper_sha256": "226a4f919c435788343fa8a69752c47104a49bdeccc5c73c1726c3063df3cfb6",
+  "native_mode_checks": {
+    "SDR": [
+      {
+        "requested": 14,
+        "final_native_mode": 14,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 10,
+        "final_native_mode": 10,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 9,
+        "final_native_mode": 9,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 0,
+        "final_native_mode": 0,
+        "final_dolby_flag": 0
+      }
+    ],
+    "HDR": [
+      {
+        "requested": 15,
+        "final_native_mode": 15,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 16,
+        "final_native_mode": 16,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 17,
+        "final_native_mode": 17,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 18,
+        "final_native_mode": 18,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 19,
+        "final_native_mode": 19,
+        "final_dolby_flag": 0
+      },
+      {
+        "requested": 76,
+        "final_native_mode": 76,
+        "final_dolby_flag": 0
+      }
+    ],
+    "Dolby Vision": [
+      {
+        "requested": 5,
+        "final_native_mode": 5,
+        "final_dolby_flag": 1
+      },
+      {
+        "requested": 59,
+        "final_native_mode": 59,
+        "final_dolby_flag": 1
+      },
+      {
+        "requested": 6,
+        "final_native_mode": 6,
+        "final_dolby_flag": 1
+      },
+      {
+        "requested": 13,
+        "final_native_mode": 13,
+        "final_dolby_flag": 1
+      },
+      {
+        "requested": 61,
+        "final_native_mode": 61,
+        "final_dolby_flag": 1
+      }
+    ]
+  },
+  "hdr_tone_checks": {
+    "5": {
+      "native_return": 0,
+      "native_verified": true,
+      "provider_return": -1,
+      "warnings": [
+        "Provider 返回 -1；原生回读已确认"
+      ]
+    },
+    "0": {
+      "native_return": 0,
+      "native_verified": true,
+      "provider_return": -1,
+      "warnings": [
+        "Provider 返回 -1；原生回读已确认"
+      ]
+    },
+    "2": {
+      "native_return": 0,
+      "native_verified": true,
+      "provider_return": -1,
+      "warnings": [
+        "Provider 返回 -1；原生回读已确认"
+      ]
+    },
+    "1": {
+      "native_return": 0,
+      "native_verified": true,
+      "provider_return": -1,
+      "warnings": [
+        "Provider 返回 -1；原生回读已确认"
+      ]
+    }
+  },
+  "windows_signal_checks": [
+    {
+      "windows_hdr": true,
+      "windows_dolby": "On",
+      "native_mode": 13,
+      "native_dolby_flag": 1
+    },
+    {
+      "windows_hdr": true,
+      "windows_dolby": "Off",
+      "native_mode": 16,
+      "native_dolby_flag": 0
+    },
+    {
+      "windows_hdr": false,
+      "windows_dolby": "Off",
+      "native_mode": 10,
+      "native_dolby_flag": 0
+    },
+    {
+      "windows_hdr": true,
+      "windows_dolby": "On",
+      "native_mode": 13,
+      "native_dolby_flag": 1
+    }
+  ],
+  "restoration": {
+    "native_fields": 50,
+    "picture_database_fields": 112,
+    "all_unchanged_after_restoration": true,
+    "original_pc_config_executable_startup_sha256_unchanged": true,
+    "official_app_restarted_and_rechecked": true,
+    "windows_hdr_and_dolby_restored": true,
+    "sdr_content_brightness_restored": true
+  },
+  "local_tests": {
+    "passed": 465
+  },
+  "notes": [
+    "The first backup covered 49 native fields; auto-color was added to subsequent 50-field backups. Original 49 fields and 112 database fields match the final audit; auto-color matches the first complete Dolby backup.",
+    "Mode tests initially exposed firmware changes to auto-color and color-space caches; restoration was completed and rechecked in the final follow-up and a separate getter-only audit.",
+    "Mode/tone reads and writes used the actual Python controller and Java helper; UI state was checked using native readbacks.",
+    "No optical measurements, device-reboot persistence checks, full-preset application, RGB/CMS writes, or WB20 selector/table writes."
+  ]
+}

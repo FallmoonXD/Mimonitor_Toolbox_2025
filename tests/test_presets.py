@@ -8,6 +8,9 @@ class FakeAdb:
         self.calls = []
         self.fail_on = fail_on or set()
         self.source = source
+        self.mode = 13
+        self.dovi = 1
+        self.tone = 5
 
     def _record(self, name, *args, **kwargs):
         self.calls.append((name,) + args)
@@ -16,6 +19,17 @@ class FakeAdb:
 
     def put(self, key, value, check=False):
         self._record("put", key, value, check)
+
+    def picture_mode(self, value, check=True, expected_bank=None):
+        from mimonitor_toolbox.picture_modes import DOLBY_NATIVE_MODES
+        self._record("picture_mode", value, check)
+        self.put("picture_mode", str(value), check=check)
+        self.mode, self.dovi = value, int(value in DOLBY_NATIVE_MODES)
+        return {"state": self.read_picture_state(), "warnings": []}
+
+    def read_picture_state(self):
+        return {"g_video__picture_mode": self.mode, "g_dovi_info__": self.dovi,
+                "g_video__vid_hdr_tone_mapping_mode": self.tone}
 
     def jni_set(self, key, val, upd=3, check=False):
         self._record("jni_set", key, val, upd, check)
@@ -35,6 +49,7 @@ class FakeAdb:
 
     def hdr_tone_mapping(self, val, upd=3, check=False):
         self._record("hdr_tone_mapping", val, upd, check)
+        self.tone = val
 
     def check_and_heal_jar(self):
         self._record("check_and_heal_jar")
@@ -463,6 +478,18 @@ class ReadPipelineCoverageTests(unittest.TestCase):
         self.assertEqual(result.failed, [("画面场景校验", "bank changed")])
         self.assertTrue(result.skipped)
         self.assertEqual([call[1] for call in target.calls if call[0] == "put"], ["picture_mode"])
+
+    def test_failed_native_calibration_or_tone_stops_later_picture_writes(self):
+        from mimonitor_toolbox import presets
+
+        for failed in ("jni_set_color_gains", "hdr_tone_mapping"):
+            with self.subTest(failed=failed):
+                target = FakeAdb(fail_on={failed})
+                result = presets.apply_preset(target, full_values(mode=16, color_temp=3))
+                self.assertTrue(result.failed)
+                self.assertTrue(any(label == "色域" for label, _ in result.skipped))
+                self.assertFalse(any(call[:2] == ("jni_set", "g_video__vid_gamut_mapping_mode")
+                                     for call in target.calls))
 
 
 class FreeSyncPresetTests(unittest.TestCase):

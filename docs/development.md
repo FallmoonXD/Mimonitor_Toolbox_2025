@@ -21,7 +21,7 @@ $env:MIMONITOR_SETTINGS_PATH = Join-Path $env:TEMP ('mimonitor-2025-tests-' + [g
 
 Java 回执用例使用模拟 native/Provider 接口，编译并执行实际 helper 回执代码。本机有 `javac` 和 `java` 时执行；没有 JDK 时跳过相应用例。
 
-2026-10-13 独立仓库初始提交的完整 445 项测试及 GitHub CI 通过。实机证据与尚待验收的操作见 [兼容记录](2025-compatibility.md)。
+2026-10-13 原生模式控制改动的完整 465 项本地测试通过，包含实际 Java helper 代码的模拟回执测试。实机结果与尚待验收的操作见 [兼容记录](2025-compatibility.md)。
 
 ## Windows 构建
 

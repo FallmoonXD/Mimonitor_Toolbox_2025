@@ -9,8 +9,9 @@ class DisplayFeatureTests(unittest.TestCase):
         from mimonitor_toolbox.display_features import DisplayFeaturesMixin
 
         host = object()
-        self.assertEqual(DisplayFeaturesMixin._picture_mode_group_name(host, 64), "标准")
-        self.assertEqual(DisplayFeaturesMixin._picture_mode_group_name(host, 25), "游戏")
+        self.assertEqual(DisplayFeaturesMixin._picture_mode_group_name(host, 69), "标准")
+        self.assertEqual(DisplayFeaturesMixin._picture_mode_group_name(host, 64), "游戏")
+        self.assertEqual(DisplayFeaturesMixin._picture_mode_group_name(host, 25), "HDR 游戏")
         self.assertEqual(DisplayFeaturesMixin._picture_mode_group_name(host, 9), "电影")
 
     def test_zero_scenario_uses_picture_mode_without_overriding_valid_scenarios(self):
@@ -407,6 +408,11 @@ class PresetOrchestrationTests(unittest.TestCase):
 
             def put(self, key, value, check=False):
                 calls.append(("put", key, value))
+
+            def picture_mode(self, value, check=True):
+                calls.append(("native_picture_mode", value))
+                self.put("picture_mode", str(value), check=check)
+                return {"warnings": []}
 
             def jni_set(self, key, value, upd=3, check=False):
                 calls.append(("jni_set", key, value, upd))

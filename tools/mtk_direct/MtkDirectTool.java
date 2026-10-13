@@ -14,6 +14,8 @@ public class MtkDirectTool {
     private static final String NATIVE_LIB_PATH = "/vendor/lib64:/system/lib64:/system_ext/lib64";
     private static String checkedResultFile;
     private static int expectedBank = -1;
+    private static Integer bankBefore;
+    private static Integer doviBefore;
     private static final StringBuilder checkedResult = new StringBuilder();
 
     private static void receipt(String key, Object value) {
@@ -39,6 +41,8 @@ public class MtkDirectTool {
         if (expected >= 0 && (bank == null || bank.intValue() != expected)) {
             throw new IllegalStateException("Picture bank changed: expected " + expected + ", actual " + bank);
         }
+        bankBefore = bank;
+        doviBefore = readReceipt(loader, "g_dovi_info__", "dovi_before");
     }
 
     private static void readCheckedValues(ClassLoader loader, String... keys) throws Exception {
@@ -46,6 +50,33 @@ public class MtkDirectTool {
         Thread.sleep(250);
         for (String key : keys) readReceipt(loader, key, "readback." + key);
         readReceipt(loader, "g_video__picture_mode", "bank_after");
+        readReceipt(loader, "g_dovi_info__", "dovi_after");
+    }
+
+    private static int signalFamily(int mode, int dovi) {
+        boolean dolby = mode == 4 || mode == 5 || mode == 6 || mode == 13 || mode == 59 || mode == 61;
+        if ((dovi != 0 && dovi != 1) || (dovi == 1) != dolby) return -1;
+        if (dolby) return 2;
+        if (mode == 15 || mode == 16 || mode == 17 || mode == 18 || mode == 19
+                || mode == 35 || mode == 55 || mode == 76 || (mode >= 25 && mode <= 34)) return 1;
+        if (mode == 0 || mode == 2 || mode == 3 || mode == 9 || mode == 10 || mode == 14
+                || mode == 22 || mode == 75 || (mode >= 64 && mode <= 73)) return 0;
+        return -1;
+    }
+
+    private static void getPictureState(ClassLoader loader) throws Exception {
+        readCheckedValues(loader, "g_video__picture_mode", "g_dovi_info__", "g_video__vid_hdr_tone_mapping_mode");
+    }
+
+    private static void setPictureMode(ClassLoader loader, Method setter, int value, int update) throws Exception {
+        if (bankBefore == null || doviBefore == null || signalFamily(bankBefore, doviBefore) < 0
+                || signalFamily(bankBefore, doviBefore) != signalFamily(value, doviBefore)) {
+            throw new IllegalStateException("Target picture mode does not match the active input signal");
+        }
+        int result = (Integer) setter.invoke(null, -1, "g_video__picture_mode", value, update);
+        receipt("native_return", result);
+        if (result != 0) throw new IllegalStateException("Native picture mode failed: " + result);
+        readCheckedValues(loader, "g_video__picture_mode");
     }
 
     private static void log(String msg) {
@@ -107,6 +138,10 @@ public class MtkDirectTool {
 
     private static void setHdrToneMapping(ClassLoader classLoader, Method setConfigValueNative, int value,
             int isUpdate) throws Exception {
+        if (checkedResultFile != null && (bankBefore == null || doviBefore == null
+                || signalFamily(bankBefore, doviBefore) != 1)) {
+            throw new IllegalStateException("HDR tone mapping requires an HDR input, not Dolby Vision or SDR");
+        }
         int configRet = (Integer) setConfigValueNative.invoke(
                 null, -1, "g_video__vid_hdr_tone_mapping_mode", value, isUpdate);
         Integer hdrAttrRet = null;
@@ -162,15 +197,17 @@ public class MtkDirectTool {
         }
 
         String cmd = args[0];
-        if (cmd.equals("setColorGainsChecked") || cmd.equals("setHdrToneMappingChecked")) {
+        if (cmd.equals("setColorGainsChecked") || cmd.equals("setHdrToneMappingChecked")
+                || cmd.equals("setPictureModeChecked") || cmd.equals("getPictureState")) {
             int required = cmd.equals("setColorGainsChecked") ? 6 : 5;
+            if (cmd.equals("getPictureState")) required = 2;
             if (args.length != required) throw new IllegalArgumentException("Invalid checked action arguments");
             checkedResultFile = args[args.length - 1];
-            expectedBank = Integer.parseInt(args[args.length - 2]);
+            if (!cmd.equals("getPictureState")) expectedBank = Integer.parseInt(args[args.length - 2]);
             if (!checkedResultFile.matches("/sdcard/Download/Mimonitor_Toolbox/\\.mtk_action_[a-f0-9]+\\.txt")) {
                 throw new IllegalArgumentException("Invalid checked result path");
             }
-            cmd = cmd.substring(0, cmd.length() - "Checked".length());
+            if (cmd.endsWith("Checked")) cmd = cmd.substring(0, cmd.length() - "Checked".length());
             receipt("__version", 1);
             receipt("__action", cmd);
         }
@@ -179,6 +216,11 @@ public class MtkDirectTool {
         try {
             ClassLoader classLoader = tvClassLoader();
             if (checkedResultFile != null) checkBank(classLoader, expectedBank);
+
+            if ("getPictureState".equals(cmd)) {
+                getPictureState(classLoader);
+                return;
+            }
 
             if ("setColorGains".equals(cmd)) {
                 if (args.length < 4) {
@@ -202,7 +244,9 @@ public class MtkDirectTool {
                     "getMinMaxConfigValue_native", int.class, String.class);
             getMinMaxNative.setAccessible(true);
 
-            if ("get".equals(cmd)) {
+            if ("setPictureMode".equals(cmd)) {
+                setPictureMode(classLoader, setConfigValueNative, Integer.parseInt(args[1]), Integer.parseInt(args[2]));
+            } else if ("get".equals(cmd)) {
                 if (key == null) {
                     log("ERROR: key is required for get");
                     writeResult("ERROR");
