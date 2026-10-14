@@ -5,6 +5,8 @@ MonitorToolbox deploys it to the display and runs it through `TvService`.
 
 It provides:
 
+- `setSystemOptionChecked`: whitelisted 2025 system picture fields with bank and signal guards, native return codes and delayed readback
+
 - generic MTK config `get`, `set`, `getMinMax`, and `dump`
 - `batchGet <key...>` to read multiple MTK config keys in one TvService call
 - `setColorGains <red> <green> <blue>` for custom color temperature gain

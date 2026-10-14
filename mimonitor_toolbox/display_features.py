@@ -1725,6 +1725,8 @@ class DisplayFeaturesMixin:
             self.log(f"已记忆 {state_name} 精密控光: {LOCAL_DIMMING_NAMES.get(value, value)}")
 
     def _highlight_btn(self, btn, is_active):
+        if btn.property("controlPending"):
+            return
         if isinstance(btn, ToggleButton):
             btn.blockSignals(True)
             btn.setChecked(is_active)
@@ -1807,7 +1809,7 @@ class DisplayFeaturesMixin:
         choices = dict(picture_mode_choices(mode, dovi))
         for value, button in getattr(self, "mode_btns", {}).items():
             button.setVisible(value in choices)
-            button.setEnabled(value in choices)
+            button.setEnabled(value in choices and not button.property("controlPending"))
         label = getattr(self, "picture_signal_label", None)
         if label:
             label.setText(f"当前信号：{picture_signal_family(mode, dovi) or '未知'}")
@@ -1845,7 +1847,7 @@ class DisplayFeaturesMixin:
         card.setVisible(visible)
         raw = values.get("g_video__vid_hdr_tone_mapping_mode")
         for value, button in getattr(self, "state_buttons", {}).get("g_video__vid_hdr_tone_mapping_mode", {}).items():
-            button.setEnabled(family == "HDR" and raw is not None)
+            button.setEnabled(family == "HDR" and raw is not None and not button.property("controlPending"))
             self._highlight_btn(button, family == "HDR" and raw is not None and str(raw) == str(value))
         status = getattr(self, "hdr_tone_mapping_status", None)
         if status:
@@ -1969,6 +1971,103 @@ class DisplayFeaturesMixin:
                 self._highlight_btn(btn, str(v) == str(val))
         if key == "picture_color_temperature":
             self._update_color_gain_visibility(val)
+
+    def _dispatch_state_button(self, key, value, command, checked=False):
+        """Show the request immediately; confirmed values change only in the action callback."""
+        if not self.check_connection():
+            self._optimistic_highlight(key, self.current_vals.get(key))
+            return
+        pending = getattr(self, "_pending_controls", None)
+        if pending is None:
+            pending = self._pending_controls = {}
+        if key in pending:
+            return
+        buttons = self.mode_btns if key == "g_video__picture_mode" else self.state_buttons.get(key, {})
+        token = object()
+        entry = {"token": token, "previous": self.current_vals.get(key), "buttons": [], "claimed": False}
+        pending[key] = entry
+        for option, button in buttons.items():
+            entry["buttons"].append((button, button.text(), button.isEnabled()))
+            self._highlight_btn(button, str(option) == str(value))
+            button.setProperty("controlPending", True)
+            button.setEnabled(False)
+            if str(option) == str(value):
+                button.setText(button.text() + " …")
+        self._dispatching_control = (key, token)
+        try:
+            command(checked)
+        finally:
+            self._dispatching_control = None
+            if not entry["claimed"]:
+                self._finish_control_feedback(key, token, False)
+
+    def _finish_control_feedback(self, key, token, ok):
+        pending = getattr(self, "_pending_controls", {})
+        entry = pending.get(key)
+        if entry is None or entry["token"] is not token:
+            return
+        pending.pop(key)
+        for button, text, enabled in entry["buttons"]:
+            button.setProperty("controlPending", False)
+            button.setText(text)
+            button.setEnabled(enabled)
+        actual = self.current_vals.get(key) if ok else entry["previous"]
+        if key == "g_video__picture_mode":
+            self._highlight_mode(actual)
+        else:
+            self._optimistic_highlight(key, actual)
+        self._update_osd_availability()
+        self._update_monitor_light_controls()
+        self._update_system_picture_controls()
+
+    def _set_system_picture_option(self, option, value, name):
+        if not self.check_connection():
+            return
+        from .system_picture_2025 import SYSTEM_OPTIONS
+        title, _key, _settings, _choices = SYSTEM_OPTIONS[option]
+        bank = self.current_vals.get("g_video__picture_mode")
+        result = {}
+        def operation():
+            result.update(self.adb.system_picture_option(option, value, expected_bank=bank))
+        def success():
+            self.values_signal.emit(result["readback"])
+            self.log(title + ": " + name)
+        self._run_adb_action(title, operation, success,
+                             lambda: self._force_refresh_page("picturePage"))
+
+    def _update_system_picture_controls(self):
+        from .system_picture_2025 import SYSTEM_OPTIONS, system_option_block_reason
+        values = getattr(self, "current_vals", {})
+        family = picture_signal_family(values.get("g_video__picture_mode"), values.get("g_dovi_info__"))
+        gamma_card = getattr(self, "system_gamma_card", None)
+        if gamma_card:
+            gamma_card.setEnabled(family is not None and values.get("system_gamma_policy") in (0, 1))
+        for option, cards in getattr(self, "system_picture_cards", {}).items():
+            _title, key, _settings, choices = SYSTEM_OPTIONS[option]
+            reason = system_option_block_reason(option, values.get("g_video__picture_mode"), values.get("g_dovi_info__"))
+            valid = not reason and values.get(key) in dict(choices)
+            for card in cards:
+                card.setEnabled(valid)
+                card.setToolTip(reason or ("未取得有效的原生读数" if not valid else ""))
+            for button in getattr(self, "state_buttons", {}).get(key, {}).values():
+                button.setEnabled(valid and not button.property("controlPending"))
+        label = getattr(self, "system_color_status", None)
+        if label:
+            raw = values.get("g_video__vid_auto_color")
+            label.setText("颜色增强：" + {0: "关", 1: "低", 2: "中", 3: "高"}.get(raw, "未读取") + "。此开关会关闭色彩详细设定，当前仅显示状态。")
+        label = getattr(self, "cms_status", None)
+        if label:
+            label.setText({0: "关", 1: "开"}.get(values.get("g_fusion_picture__color_tuner_enable"), "未读取"))
+        for key, label in getattr(self, "cms_value_labels", {}).items():
+            value = values.get(key)
+            label.setText(str(value) if isinstance(value, int) and value >= 0 else "—")
+        label = getattr(self, "wb_status", None)
+        if label:
+            prefix = "g_fusion_picture__pq_wb_cor_"
+            state = {0: "关", 1: "开"}.get(values.get(prefix + "enable"), "未读取")
+            point = values.get(prefix + "gain")
+            rgb = "/".join(str(values.get(prefix + color, "—")) for color in ("red", "green", "blue"))
+            label.setText(f"20 点白平衡：{state}；当前点 {point if point is not None else '—'}；RGB {rgb}")
 
     def _update_color_gain_visibility(self, color_temp=None):
         is_custom = str(color_temp if color_temp is not None else self.current_vals.get("picture_color_temperature")) == str(CUSTOM_COLOR_TEMP_VALUE)
@@ -2387,14 +2486,20 @@ class DisplayFeaturesMixin:
     def _set_osd_option(self, option, value, name):
         if not self.check_connection():
             return
-        title = {"dark_enhancement": "暗区增强", "color_range": "色彩动态范围",
+        title = {"gamma_policy": "Gamma", "dark_enhancement": "暗区增强", "color_range": "色彩动态范围",
                  "eye_protection": "低蓝光护眼模式"}[option]
+        result = {}
+        bank = self.current_vals.get("g_video__picture_mode")
+        def operation():
+            result.update(self.adb.osd_option(option, value, expected_bank=bank))
         def success():
             self.log(f"{title}: {name}")
+            from .device_features import apply_picture_jni_overrides
+            values = {}
+            apply_picture_jni_overrides(values, result["readback"])
+            self.values_signal.emit(values)
             self._note_picture_change()
-            self._force_refresh_page("picturePage")
-            self._force_refresh_page("gamePage")
-        self._run_adb_action(title, lambda: self.adb.osd_option(option, value), success,
+        self._run_adb_action(title, operation, success,
             lambda: self._force_refresh_page("picturePage"))
 
     def _open_monitor_osd(self):
@@ -2438,7 +2543,7 @@ class DisplayFeaturesMixin:
                    LIGHT_KEYS[3]: valid and on}
         for key, active in enabled.items():
             for button in getattr(self, "state_buttons", {}).get(key, {}).values():
-                button.setEnabled(bool(active))
+                button.setEnabled(bool(active) and not button.property("controlPending"))
 
     def _update_osd_availability(self):
         vals = getattr(self, "current_vals", {})

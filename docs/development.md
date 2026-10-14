@@ -15,6 +15,7 @@ python -m venv .venv
 
 ```powershell
 $env:QT_QPA_PLATFORM = 'offscreen'
+$env:MIMONITOR_ADB_SERVER_PORT = '5099'
 $env:MIMONITOR_SETTINGS_PATH = Join-Path $env:TEMP ('mimonitor-2025-tests-' + [guid]::NewGuid().ToString('N') + '.json')
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
 ```
@@ -25,7 +26,7 @@ Java 回执用例使用模拟 native/Provider 接口，编译并执行实际 hel
 
 同日本地部署的 Nuitka standalone 构建发现旧标题栏 slot 在控件删除后仍响应标题变化；修复后增加回归用例，466 项测试通过。已部署程序并验证可见窗口与实机连接；该本地构建未创建发布标签。
 
-随后完成 OSD 对照适配，478 项测试通过，新增控制已逐档实机验收并更新本地 standalone 程序。安装后再次复核 50 个原生校色字段、112 个画质数据库字段；实际窗口、FreeSync 状态、灯效页面和深色主题说明文字已检查。详情见 [OSD 对照表](2025-osd-options.md)。
+随后完成 OSD 对照适配，478 项测试通过，新增控制已逐档实机验收并更新本地 standalone 程序。当时安装后的校色恢复核对仅覆盖当前 Dolby 模式，后来发现 SDR、HDR 漏恢复；已在下一轮修复记录中更正。详情见 [OSD 对照表](2025-osd-options.md) 与 [系统画面设置](2025-system-picture-settings.md)。
 
 ## Windows 构建
 

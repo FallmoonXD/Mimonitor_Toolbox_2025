@@ -88,6 +88,7 @@
     "optical_validation": false
   },
   "restoration": {
+    "coverage_correction_2026_10_14": "Active Dolby bank only. SDR baseline already contained changed calibration; HDR calibration was not independently checked. All three user-calibrated modes were repaired and rechecked on 2026-10-14.",
     "native_calibration_fields": 50,
     "picture_database_fields": 112,
     "additional_native_fields": 4,

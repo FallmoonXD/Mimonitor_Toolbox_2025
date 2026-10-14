@@ -403,7 +403,9 @@ def parse_native_picture_state(output):
 
 
 class Adb:
-    def __init__(self, ip=""): self.ip = ip
+    def __init__(self, ip=""):
+        self.ip = ip
+        self._verified_jars = {}
     @property
     def serial(self):
         return format_adb_serial(self.ip)
@@ -414,6 +416,10 @@ class Adb:
         return out
     def _check_and_heal_remote_jar(self, filename, local_jar, check=False):
         with self.transaction():
+            fingerprint = self._jar_fingerprint(local_jar)
+            cached = self._verified_jars.get(filename)
+            if cached and cached[:2] == (self.serial, fingerprint) and time.monotonic() - cached[2] < 60:
+                return True
             sdcard_jar = f"/sdcard/{filename}"
             cache_jar = f"/data/data/mitv.service/cache/{filename}"
             sd_size_lines = self.shell(
@@ -446,6 +452,18 @@ class Adb:
             )
             return True
 
+    @staticmethod
+    def _jar_fingerprint(path):
+        try:
+            stat = os.stat(path)
+            return (str(path), stat.st_size, stat.st_mtime_ns)
+        except (OSError, TypeError):
+            return None
+
+    def _confirm_remote_jar(self, filename, path):
+        # Cache only after a helper actually executed and its unique receipt was validated.
+        self._verified_jars[filename] = (self.serial, self._jar_fingerprint(path), time.monotonic())
+
     def check_and_heal_jar(self):
         self._check_and_heal_remote_jar(
             "MtkDirectTool.jar",
@@ -470,6 +488,7 @@ class Adb:
         state = adb_device_state(self.serial, timeout=2)
         if state == "device":
             return True, state
+        self._verified_jars.clear()
         adb_run(["connect", self.serial], timeout=5)
         state = adb_device_state(self.serial, timeout=3)
         return state == "device", state
@@ -481,6 +500,7 @@ class Adb:
         """
         if not self.ip:
             return False, "unknown"
+        self._verified_jars.clear()
         adb_run(["disconnect", self.serial], timeout=3)
         return self.ensure_connected()
     def device_state(self, timeout=3):
@@ -555,7 +575,7 @@ class Adb:
     def read_picture_state(self):
         return self._native_helper_result("getPictureState", [], parse_native_picture_state)
 
-    def osd_option(self, option, value):
+    def osd_option(self, option, value, expected_bank=None):
         from .osd_2025 import native_option_value
         from .core import is_game_picture_mode
         with self.transaction():
@@ -563,6 +583,8 @@ class Adb:
                 raise RuntimeError("此固件的护眼开关会重载白平衡；工具箱目前仅显示状态，以保留校色配置")
             state = self.read_picture_state()
             bank = state["g_video__picture_mode"]
+            if expected_bank is not None and bank != int(expected_bank):
+                raise RuntimeError("画面场景已变化，请刷新后重试")
             family = picture_signal_family(bank, state["g_dovi_info__"])
             if family not in ("SDR", "HDR", "Dolby Vision"):
                 raise RuntimeError("输入信号未确认，请刷新后重试")
@@ -577,6 +599,7 @@ class Adb:
             result = self._checked_native_action("setOsdOption", [key, target, 3],
                                                 {key: target}, expected_bank=bank)
             setting = {"dark_enhancement": "picture_gamma_mode",
+                       "gamma_policy": "picture_gamma_mode",
                        "color_range": "tv_picture_video_hdmi_rgb_range",
                        "eye_protection": "mitv.settings.db.video.g_video__clr_eye_protection_mode"}[option]
             self.put(setting, target, check=True)
@@ -584,6 +607,29 @@ class Adb:
             if int(final[key]) != target or int(final["g_video__picture_mode"]) != bank or int(final["g_dovi_info__"]) != state["g_dovi_info__"]:
                 raise RuntimeError("OSD 配置最终回读不一致或输入已变化")
             return result
+
+    def system_picture_option(self, option, value, expected_bank=None):
+        from .system_picture_2025 import system_option, system_option_block_reason
+        _name, native, settings = system_option(option, value)
+        with self.transaction():
+            state = self.read_picture_state()
+            bank = state["g_video__picture_mode"]
+            if expected_bank is not None and bank != int(expected_bank):
+                raise RuntimeError("画面场景已变化，请刷新后重试")
+            reason = system_option_block_reason(option, bank, state["g_dovi_info__"])
+            if reason:
+                raise RuntimeError(reason)
+            results = {}
+            for key, target in native.items():
+                result = self._checked_native_action("setSystemOption", [key, target, 3],
+                    {key: target}, expected_bank=bank)
+                results.update(result["readback"])
+            for key in settings:
+                self.put(key, int(value), check=True)
+            final = self.jni_batch_get_or_single(list(native) + ["g_video__picture_mode", "g_dovi_info__"], check=True)
+            if any(final.get(k) != v for k, v in native.items()) or final.get("g_video__picture_mode") != bank or final.get("g_dovi_info__") != state["g_dovi_info__"]:
+                raise RuntimeError("系统画面设置最终回读不一致或输入已变化")
+            return {"readback": results, "native_verified": True}
 
     def monitor_lights(self, updates):
         from .osd_2025 import LIGHT_KEYS, light_commands
@@ -669,8 +715,12 @@ class Adb:
                     f"cat {result_file} 2>/dev/null", check=True,
                 )
                 result = parser(output)
+                self._confirm_remote_jar("MtkDirectTool.jar", get_mtk_direct_tool_path())
                 _adb_log(f"{command_action} verified: {result}")
                 return result
+            except Exception:
+                self._verified_jars.pop("MtkDirectTool.jar", None)
+                raise
             finally:
                 self.shell(f"rm -f {result_file}")
     def jni_get(self, key, check=False):

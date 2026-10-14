@@ -7,6 +7,7 @@
 import os
 import sys
 import time
+from .system_picture_2025 import SYSTEM_OPTIONS, CMS_COLORS, CMS_NAMES
 
 from PyQt6.QtCore import QSize, QTime, Qt, QTimer
 from PyQt6.QtGui import QColor, QFontMetrics, QIcon
@@ -307,7 +308,8 @@ class PagesMixin:
             b = ToggleButton(name, lf)
             b.setCheckable(True)
             b.setFixedWidth(100)
-            b.clicked.connect(lambda checked=False, v=val, n=name: self._set_mode(v, n))
+            b.clicked.connect(lambda checked=False, v=val, n=name: self._dispatch_state_button(
+                "g_video__picture_mode", v, lambda _: self._set_mode(v, n), checked))
             h.addWidget(b)
             self.mode_btns[val] = b
             b.setVisible(False)
@@ -388,6 +390,49 @@ class PagesMixin:
             (name, value, lambda _, v=value, n=name: self._set_osd_option("color_range", v, n))
             for value, name in OSD_OPTIONS["color_range"]
         ], state_key="tv_picture_video_hdmi_rgb_range")
+
+        layout.addWidget(SubtitleLabel("系统画面设置", container))
+        self.system_gamma_card = self._btn_section(layout, "Gamma", [
+            (name, value, lambda _, v=value, n=name: self._set_osd_option("gamma_policy", v, n))
+            for value, name in OSD_OPTIONS["gamma_policy"]
+        ], state_key="system_gamma_policy")
+        self.system_picture_cards = {}
+        for option, (title, native_key, _settings, choices) in SYSTEM_OPTIONS.items():
+            for group in (choices[:5], choices[5:]):
+                if not group:
+                    continue
+                card = self._btn_section(layout, title, [
+                    (name, value, lambda _, opt=option, v=value, n=name: self._set_system_picture_option(opt, v, n))
+                    for value, name in group
+                ], state_key=native_key)
+                self.system_picture_cards.setdefault(option, []).append(card)
+
+        self.system_color_status = BodyLabel("颜色增强：未读取", container)
+        self.system_color_status.setWordWrap(True)
+        layout.addWidget(self.system_color_status)
+        calibration = SimpleCardWidget(container)
+        calibration_layout = QVBoxLayout(calibration)
+        calibration_layout.addWidget(BodyLabel("色彩详细设定", calibration))
+        self.cms_status = BodyLabel("未读取", calibration)
+        calibration_layout.addWidget(self.cms_status)
+        grid = QGridLayout()
+        for column, text in enumerate(("颜色", "色调", "饱和度", "亮度")):
+            grid.addWidget(BodyLabel(text, calibration), 0, column)
+        self.cms_value_labels = {}
+        for row, (color, name) in enumerate(zip(CMS_COLORS, CMS_NAMES), 1):
+            grid.addWidget(BodyLabel(name, calibration), row, 0)
+            for column, axis in enumerate(("hue", "sat", "bri"), 1):
+                key = "g_fusion_picture__color_tuner_" + axis + "_" + color
+                label = BodyLabel("—", calibration)
+                self.cms_value_labels[key] = label
+                grid.addWidget(label, row, column)
+        calibration_layout.addLayout(grid)
+        self.wb_status = BodyLabel("20 点白平衡：未读取", calibration)
+        self.wb_status.setWordWrap(True)
+        calibration_layout.addWidget(self.wb_status)
+        calibration_layout.addWidget(CaptionLabel("校色参数仅显示当前值。白平衡只读取当前点，刷新不会切换点位。", calibration))
+        layout.addWidget(calibration)
+        self._update_system_picture_controls()
 
         scroll.setWidget(container)
         return scroll
@@ -488,7 +533,9 @@ class PagesMixin:
             b = ToggleButton(n, card)
             b.setCheckable(True)
             b.setFixedSize(120, 45)
-            b.clicked.connect(lambda checked=False, val=v, name=n: self._set("mitv.tvplayer.hdmi.last.source", val, name))
+            b.clicked.connect(lambda checked=False, val=v, name=n: self._dispatch_state_button(
+                "mitv.tvplayer.hdmi.last.source", val,
+                lambda _: self._set("mitv.tvplayer.hdmi.last.source", val, name), checked))
             btn_layout.addWidget(b)
             self.state_buttons["mitv.tvplayer.hdmi.last.source"][v] = b
 
@@ -2044,7 +2091,8 @@ class PagesMixin:
                 b = ToggleButton(text, card)
                 b.setCheckable(True)
                 b.setMinimumWidth(80)
-                b.clicked.connect(cmd)
+                b.clicked.connect(lambda checked=False, k=state_key, v=val, c=cmd:
+                                  self._dispatch_state_button(k, v, c, checked))
                 btns_layout.addWidget(b)
                 self.state_buttons[state_key][val] = b
         else:

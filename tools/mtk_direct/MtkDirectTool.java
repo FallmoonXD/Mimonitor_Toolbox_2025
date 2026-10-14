@@ -13,6 +13,7 @@ public class MtkDirectTool {
             "/system/framework/mitvmiddlewareimpl.jar:/system_ext/priv-app/TvServices/TvServices.apk";
     private static final String NATIVE_LIB_PATH = "/vendor/lib64:/system/lib64:/system_ext/lib64";
     private static String checkedResultFile;
+    private static boolean readOnlyAction;
     private static int expectedBank = -1;
     private static Integer bankBefore;
     private static Integer doviBefore;
@@ -47,7 +48,7 @@ public class MtkDirectTool {
 
     private static void readCheckedValues(ClassLoader loader, String... keys) throws Exception {
         if (checkedResultFile == null) return;
-        Thread.sleep(250);
+        if (!readOnlyAction) Thread.sleep(250);
         for (String key : keys) readReceipt(loader, key, "readback." + key);
         readReceipt(loader, "g_video__picture_mode", "bank_after");
         readReceipt(loader, "g_dovi_info__", "dovi_after");
@@ -199,8 +200,8 @@ public class MtkDirectTool {
         String cmd = args[0];
         if (cmd.equals("setColorGainsChecked") || cmd.equals("setHdrToneMappingChecked")
                 || cmd.equals("setPictureModeChecked") || cmd.equals("setOsdOptionChecked")
-                || cmd.equals("getPictureState")) {
-            int required = cmd.equals("setColorGainsChecked") || cmd.equals("setOsdOptionChecked") ? 6 : 5;
+                || cmd.equals("setSystemOptionChecked") || cmd.equals("getPictureState")) {
+            int required = cmd.equals("setColorGainsChecked") || cmd.equals("setOsdOptionChecked") || cmd.equals("setSystemOptionChecked") ? 6 : 5;
             if (cmd.equals("getPictureState")) required = 2;
             if (args.length != required) throw new IllegalArgumentException("Invalid checked action arguments");
             checkedResultFile = args[args.length - 1];
@@ -219,6 +220,7 @@ public class MtkDirectTool {
             if (checkedResultFile != null) checkBank(classLoader, expectedBank);
 
             if ("getPictureState".equals(cmd)) {
+                readOnlyAction = true;
                 getPictureState(classLoader);
                 return;
             }
@@ -245,7 +247,24 @@ public class MtkDirectTool {
                     "getMinMaxConfigValue_native", int.class, String.class);
             getMinMaxNative.setAccessible(true);
 
-            if ("setOsdOption".equals(cmd)) {
+            if ("setSystemOption".equals(cmd)) {
+                int value = Integer.parseInt(args[2]);
+                boolean valid = "g_disp__disp_gamma".equals(key) ? value >= 1 && value <= 9
+                    : "g_video__vid_aisr".equals(key) ? value == 0 || value == 2
+                    : ("g_video__vid_black_stretch".equals(key) || "g_video__vid_luma".equals(key)
+                       || "g_video__vid_3d_nr".equals(key) || "g_video__vid_nr".equals(key)
+                       || "g_video__vid_mpeg_nr".equals(key) || "g_video__vid_de_contour".equals(key)
+                       || "g_video__vid_local_contrast".equals(key))
+                       && value >= 0 && value <= 3;
+                if (!valid || checkedResultFile == null || bankBefore == null || doviBefore == null
+                        || signalFamily(bankBefore, doviBefore) < 0) {
+                    throw new IllegalArgumentException("Invalid or unconfirmed system picture option");
+                }
+                int result = (Integer) setConfigValueNative.invoke(null, -1, key, value, 3);
+                receipt("native_return", result);
+                if (result != 0) throw new IllegalStateException("Native system option failed: " + result);
+                readCheckedValues(classLoader, key);
+            } else if ("setOsdOption".equals(cmd)) {
                 int value = Integer.parseInt(args[2]);
                 if (checkedResultFile == null || bankBefore == null || doviBefore == null
                         || signalFamily(bankBefore, doviBefore) < 0) {

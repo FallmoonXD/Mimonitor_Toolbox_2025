@@ -53,6 +53,7 @@ from .presets import (
     freesync_jni_key,
 )
 from .osd_2025 import LIGHT_KEYS, SOURCE_CHOICES, OSD_NATIVE_KEYS
+from .system_picture_2025 import SYSTEM_NATIVE_KEYS
 from .widgets import InstallProgressDialog, OverlayResizeFilter
 
 _global_overlay_filter = None
@@ -95,9 +96,13 @@ def apply_picture_jni_overrides(settings_vals, jni_batch_vals):
         if (parsed := _native_int(value)) is not None
     }
     jni_out = {}
+    for key in SYSTEM_NATIVE_KEYS:
+        if key in requested_keys:
+            settings_vals[key] = jni_batch_vals.get(key)
     packed = jni_batch_vals.get("g_video__vid_gamma_mode")
     if "g_video__vid_gamma_mode" in requested_keys:
         settings_vals["osd_dark_enhancement"] = ((packed >> 8) & 255) if packed is not None else None
+        settings_vals["system_gamma_policy"] = (packed & 255) if packed is not None else None
     for native_key, setting in (("g_fusion_picture__hdmi_rgb_range", "tv_picture_video_hdmi_rgb_range"),
                                ("g_video__clr_eye_protection_mode", "osd_eye_protection"),
                                ("g_video__vid_od_response_time", "picture_response_time")):
@@ -246,7 +251,7 @@ class DeviceFeaturesMixin:
                     "mitv.tvplayer.hdmi.last.source",
                     "mitv.settings.db.video.g_video__clr_eye_protection_mode",
                 ],
-                "jni": list(PICTURE_PRESET_JNI_KEYS),
+                "jni": list(dict.fromkeys(PICTURE_PRESET_JNI_KEYS + SYSTEM_NATIVE_KEYS)),
             },
             "gamePage": {
                 "settings": [
@@ -804,6 +809,12 @@ class DeviceFeaturesMixin:
             "on_success": on_success,
             "on_failure": on_failure,
         }
+        feedback = getattr(self, "_dispatching_control", None)
+        if feedback:
+            context["control_feedback"] = feedback
+            entry = getattr(self, "_pending_controls", {}).get(feedback[0])
+            if entry and entry["token"] is feedback[1]:
+                entry["claimed"] = True
 
         def do():
             def finish_cancelled():
@@ -837,8 +848,13 @@ class DeviceFeaturesMixin:
         if getattr(self, "_cleanup_done", False):
             return
         callback = context.get("on_success") if ok else context.get("on_failure")
-        if callable(callback):
-            callback()
+        try:
+            if callable(callback):
+                callback()
+        finally:
+            feedback = context.get("control_feedback")
+            if feedback:
+                self._finish_control_feedback(*feedback, ok and not context.get("cancelled"))
         if ok or context.get("cancelled"):
             return
         label = context.get("label", "ADB 操作")
@@ -1413,7 +1429,7 @@ class DeviceFeaturesMixin:
         update_game_hint = getattr(self, "_update_game_mode_hint", None)
         if callable(update_game_hint):
             update_game_hint()
-        for method in ("_update_osd_availability", "_update_monitor_light_controls"):
+        for method in ("_update_osd_availability", "_update_monitor_light_controls", "_update_system_picture_controls"):
             callback = getattr(self, method, None)
             if callable(callback):
                 callback()
@@ -1469,14 +1485,13 @@ class DeviceFeaturesMixin:
         """
         values = {}
         with self.adb.transaction():
-            keys_str = " ".join(PICTURE_PRESET_SETTINGS_KEYS)
             out = self.adb.shell(
-                f"for k in {keys_str}; do echo $k=$(settings get global $k); done",
+                "settings list global",
                 check=True,
             )
             for line in out.split("\n"):
                 key, sep, raw = line.strip().partition("=")
-                if not sep or not key:
+                if not sep or key not in PICTURE_PRESET_SETTINGS_KEYS:
                     continue
                 if raw in ("", "null", "N/A"):
                     continue
@@ -1523,15 +1538,14 @@ class DeviceFeaturesMixin:
                 with self.adb.transaction():
                     settings_keys = cfg.get("settings", [])
                     if settings_keys:
-                        keys_str = " ".join(settings_keys)
-                        cmd = f"for k in {keys_str}; do echo $k=$(settings get global $k); done"
+                        cmd = "settings list global"
                         res = self.adb.shell(cmd)
                         for line in res.split("\n"):
                             if "=" in line:
                                 parts = line.strip().split("=", 1)
                                 if len(parts) == 2:
                                     k, v = parts[0], parts[1]
-                                    if v not in ("", "null", "N/A"):
+                                    if k in settings_keys and v not in ("", "null", "N/A"):
                                         try: settings_vals[k] = int(v)
                                         except (TypeError, ValueError): settings_vals[k] = v
 

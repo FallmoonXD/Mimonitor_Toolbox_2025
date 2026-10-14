@@ -1034,9 +1034,9 @@ class StateMachineTests(unittest.TestCase):
 
             def shell(self, command):
                 rows = []
-                if " picture_mode " in command:
+                if command == "settings list global" or " picture_mode " in command:
                     rows.append("picture_mode=14")
-                if " picture_preset_scenario " in command:
+                if command == "settings list global" or " picture_preset_scenario " in command:
                     rows.append("picture_preset_scenario=14")
                 rows.extend([
                     "front_sight_index=null",

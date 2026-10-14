@@ -1,0 +1,946 @@
+{
+  "date": "2026-10-14",
+  "device": "Redmi G Pro 27U 2025 / beekeeper",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "evidence_method": [
+    "ADB read of firmware APK and running configuration",
+    "DEX resources and methods cross-checked against native setting mappings",
+    "Native setter return and delayed readback, then database sync and final readback",
+    "Actual Qt window mouse clicks against the connected monitor"
+  ],
+  "settings_apk_sha256": "a987b8d3c65989c5154dcba1fc3247a7c05af2ca6441e29ac2bb03151a9c58f1",
+  "raw_system_setting_cases": [
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 4,
+      "seconds": 5.379,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 5,
+      "seconds": 5.062,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 3,
+      "seconds": 5.072,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 6,
+      "seconds": 5.019,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 2,
+      "seconds": 4.926,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 7,
+      "seconds": 5.037,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 1,
+      "seconds": 4.954,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 8,
+      "seconds": 4.94,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "gamma_offset",
+      "value": 9,
+      "seconds": 5.058,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "black_correction",
+      "value": 0,
+      "seconds": 5.076,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "black_correction",
+      "value": 1,
+      "seconds": 5.033,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "black_correction",
+      "value": 2,
+      "seconds": 4.944,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "black_correction",
+      "value": 3,
+      "seconds": 5.066,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "contrast_enhancement",
+      "value": 0,
+      "seconds": 5.102,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "contrast_enhancement",
+      "value": 1,
+      "seconds": 5.18,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "contrast_enhancement",
+      "value": 2,
+      "seconds": 5.17,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "contrast_enhancement",
+      "value": 3,
+      "seconds": 4.973,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "local_contrast",
+      "value": 0,
+      "seconds": 5.016,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "local_contrast",
+      "value": 1,
+      "seconds": 5.156,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "local_contrast",
+      "value": 2,
+      "seconds": 5.229,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "local_contrast",
+      "value": 3,
+      "seconds": 4.967,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "noise_reduction",
+      "value": 0,
+      "seconds": 6.603,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "noise_reduction",
+      "value": 1,
+      "seconds": 6.472,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "noise_reduction",
+      "value": 2,
+      "seconds": 6.564,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "noise_reduction",
+      "value": 3,
+      "seconds": 6.672,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "mpeg_nr",
+      "value": 0,
+      "seconds": 5.09,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "mpeg_nr",
+      "value": 1,
+      "seconds": 5.028,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "mpeg_nr",
+      "value": 2,
+      "seconds": 5.058,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "mpeg_nr",
+      "value": 3,
+      "seconds": 5.066,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "smooth_gradient",
+      "value": 0,
+      "seconds": 5.208,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "smooth_gradient",
+      "value": 1,
+      "native_verified": false,
+      "error": "g_video__vid_de_contour 回读不一致：目标 1，实际 0"
+    },
+    {
+      "mode": "SDR",
+      "option": "smooth_gradient",
+      "value": 2,
+      "native_verified": false,
+      "error": "g_video__vid_de_contour 回读不一致：目标 2，实际 0"
+    },
+    {
+      "mode": "SDR",
+      "option": "smooth_gradient",
+      "value": 3,
+      "native_verified": false,
+      "error": "g_video__vid_de_contour 回读不一致：目标 3，实际 0"
+    },
+    {
+      "mode": "SDR",
+      "option": "super_resolution",
+      "value": 0,
+      "seconds": 4.834,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "SDR",
+      "option": "super_resolution",
+      "value": 2,
+      "seconds": 4.617,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 4,
+      "seconds": 4.643,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 5,
+      "seconds": 4.585,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 3,
+      "seconds": 4.366,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 6,
+      "seconds": 4.519,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 2,
+      "seconds": 4.652,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 7,
+      "seconds": 4.504,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 1,
+      "seconds": 4.546,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 8,
+      "seconds": 4.634,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "gamma_offset",
+      "value": 9,
+      "seconds": 4.382,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "black_correction",
+      "value": 0,
+      "seconds": 4.505,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "black_correction",
+      "value": 1,
+      "seconds": 4.444,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "black_correction",
+      "value": 2,
+      "seconds": 4.67,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "black_correction",
+      "value": 3,
+      "seconds": 4.605,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "contrast_enhancement",
+      "value": 0,
+      "seconds": 4.53,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "contrast_enhancement",
+      "value": 1,
+      "seconds": 4.678,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "contrast_enhancement",
+      "value": 2,
+      "seconds": 4.541,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "contrast_enhancement",
+      "value": 3,
+      "seconds": 4.64,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "local_contrast",
+      "value": 0,
+      "seconds": 4.595,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "local_contrast",
+      "value": 1,
+      "seconds": 4.573,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "local_contrast",
+      "value": 2,
+      "seconds": 4.695,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "local_contrast",
+      "value": 3,
+      "seconds": 4.661,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "noise_reduction",
+      "value": 0,
+      "seconds": 5.904,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "noise_reduction",
+      "value": 1,
+      "seconds": 6.037,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "noise_reduction",
+      "value": 2,
+      "seconds": 5.912,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "noise_reduction",
+      "value": 3,
+      "seconds": 6.176,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "mpeg_nr",
+      "value": 0,
+      "seconds": 4.646,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "mpeg_nr",
+      "value": 1,
+      "seconds": 4.548,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "mpeg_nr",
+      "value": 2,
+      "seconds": 4.51,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "mpeg_nr",
+      "value": 3,
+      "seconds": 4.703,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "smooth_gradient",
+      "value": 0,
+      "seconds": 4.536,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "smooth_gradient",
+      "value": 1,
+      "seconds": 4.567,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "smooth_gradient",
+      "value": 2,
+      "seconds": 4.522,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "smooth_gradient",
+      "value": 3,
+      "seconds": 4.655,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "super_resolution",
+      "value": 0,
+      "seconds": 4.659,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "HDR",
+      "option": "super_resolution",
+      "value": 2,
+      "seconds": 4.609,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 4,
+      "seconds": 5.187,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 5,
+      "seconds": 4.847,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 3,
+      "seconds": 4.7,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 6,
+      "seconds": 4.74,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 2,
+      "seconds": 4.669,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 7,
+      "seconds": 4.729,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 1,
+      "seconds": 4.747,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 8,
+      "seconds": 4.721,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "gamma_offset",
+      "value": 9,
+      "seconds": 4.826,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "black_correction",
+      "value": 0,
+      "seconds": 4.678,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "black_correction",
+      "value": 1,
+      "seconds": 4.729,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "black_correction",
+      "value": 2,
+      "seconds": 4.744,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "black_correction",
+      "value": 3,
+      "seconds": 4.728,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "contrast_enhancement",
+      "value": 0,
+      "seconds": 4.655,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "contrast_enhancement",
+      "value": 1,
+      "seconds": 4.712,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "contrast_enhancement",
+      "value": 2,
+      "seconds": 4.698,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "contrast_enhancement",
+      "value": 3,
+      "seconds": 4.749,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "local_contrast",
+      "value": 0,
+      "seconds": 4.729,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "local_contrast",
+      "value": 1,
+      "seconds": 4.579,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "local_contrast",
+      "value": 2,
+      "seconds": 4.783,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "local_contrast",
+      "value": 3,
+      "seconds": 4.728,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "noise_reduction",
+      "value": 0,
+      "seconds": 6.109,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "noise_reduction",
+      "value": 1,
+      "seconds": 6.069,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "noise_reduction",
+      "value": 2,
+      "seconds": 6.169,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "noise_reduction",
+      "value": 3,
+      "seconds": 6.218,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "mpeg_nr",
+      "value": 0,
+      "seconds": 4.745,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "mpeg_nr",
+      "value": 1,
+      "seconds": 4.71,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "mpeg_nr",
+      "value": 2,
+      "seconds": 4.795,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "mpeg_nr",
+      "value": 3,
+      "seconds": 4.669,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "smooth_gradient",
+      "value": 0,
+      "seconds": 4.764,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "smooth_gradient",
+      "value": 1,
+      "seconds": 4.717,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "smooth_gradient",
+      "value": 2,
+      "seconds": 4.681,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "smooth_gradient",
+      "value": 3,
+      "seconds": 4.823,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "super_resolution",
+      "value": 0,
+      "seconds": 4.718,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    },
+    {
+      "mode": "Dolby",
+      "option": "super_resolution",
+      "value": 2,
+      "seconds": 4.689,
+      "native_verified": true,
+      "unintended_native_changes": {}
+    }
+  ],
+  "native_verified_cases": 102,
+  "unavailable_cases_are_blocked_in_UI_and_API": true,
+  "system_menu_restrictions_preserved": [
+    "Black correction and contrast enhancement disabled in native SDR standard / HDR monitor modes",
+    "Local contrast hidden by the system menu in Dolby game mode; the UI/API follow that restriction"
+  ],
+  "GUI_timings": [
+    {
+      "mode": "SDR",
+      "page_refresh_ms": 1106.4
+    },
+    {
+      "mode": "SDR",
+      "gamma_policy": 1,
+      "visual_feedback_ms": 2.4,
+      "verified_completion_ms": 4289.4
+    },
+    {
+      "mode": "SDR",
+      "gamma_policy": 0,
+      "visual_feedback_ms": 1.9,
+      "verified_completion_ms": 4291.5
+    },
+    {
+      "mode": "HDR",
+      "page_refresh_ms": 1131.2
+    },
+    {
+      "mode": "HDR",
+      "gamma_policy": 1,
+      "visual_feedback_ms": 1.5,
+      "verified_completion_ms": 4052.3
+    },
+    {
+      "mode": "HDR",
+      "gamma_policy": 0,
+      "visual_feedback_ms": 1.5,
+      "verified_completion_ms": 4335.7
+    },
+    {
+      "mode": "Dolby",
+      "page_refresh_ms": 1339.0
+    },
+    {
+      "mode": "Dolby",
+      "gamma_policy": 1,
+      "visual_feedback_ms": 1.5,
+      "verified_completion_ms": 4570.3
+    },
+    {
+      "mode": "Dolby",
+      "gamma_policy": 0,
+      "visual_feedback_ms": 1.1,
+      "verified_completion_ms": 4343.2
+    }
+  ],
+  "offline_tests_passed": 487,
+  "restoration": {
+    "SDR": {
+      "native_fields_compared": 55,
+      "picture_database_fields_compared": 112,
+      "same_before_after": true,
+      "UI_action_native_and_database_differences": {
+        "native": {},
+        "db": {}
+      }
+    },
+    "HDR": {
+      "native_fields_compared": 55,
+      "picture_database_fields_compared": 112,
+      "same_before_after": true,
+      "UI_action_native_and_database_differences": {
+        "native": {},
+        "db": {}
+      }
+    },
+    "Dolby": {
+      "native_fields_compared": 55,
+      "picture_database_fields_compared": 112,
+      "same_before_after": true,
+      "UI_action_native_and_database_differences": {
+        "native": {},
+        "db": {}
+      }
+    }
+  },
+  "user_calibration_repaired": [
+    "Custom colour temperature and RGB restored separately in SDR and HDR",
+    "SDR green saturation and HDR green brightness restored from user calibration record",
+    "All three calibrated colour banks reloaded and compared with saved records"
+  ],
+  "local_dimming": "Shared setting; restored using the configured SDR/HDR linkage instead of assuming per-bank persistence",
+  "WB20_scope": "Current selected point and enable state only; no table scan, point change or reset",
+  "final_windows_output": "Original HDR on / Dolby Vision on, native bank 13, dovi flag 1",
+  "optical_validation": false
+}

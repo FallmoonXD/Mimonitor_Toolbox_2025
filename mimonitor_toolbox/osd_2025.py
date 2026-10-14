@@ -9,6 +9,7 @@ LIGHT_COLORS = tuple(enumerate(("深蓝色", "蓝色", "青色", "草绿色", "�
 OSD_NATIVE_KEYS = ("g_video__vid_gamma_mode", "g_fusion_picture__hdmi_rgb_range",
                    "g_video__clr_eye_protection_mode", "g_video__vid_od_response_time")
 OSD_OPTIONS = {
+    "gamma_policy": ((0, "2.2"), (1, "BT1886")),
     "dark_enhancement": ((0, "关"), (1, "低"), (2, "中"), (3, "高")),
     "color_range": ((0, "自动"), (1, "全范围"), (2, "有限范围")),
     "eye_protection": ((0, "关"), (1, "开")),
@@ -35,10 +36,12 @@ def light_commands(values):
 
 def native_option_value(option, value, native):
     value = validate_osd_option(option, value)
-    if option == "dark_enhancement":
+    if option in ("dark_enhancement", "gamma_policy"):
         packed = int(native["g_video__vid_gamma_mode"])
         if packed < 0:
             raise ValueError("无法读取 Gamma 配置")
+        if option == "gamma_policy":
+            return "g_video__vid_gamma_mode", (packed & ~0xFF) | value
         # OSD stores black stretch in byte 2; preserve gamma and all other bits.
         return "g_video__vid_gamma_mode", (packed & ~0xFF00) | (value << 8)
     if option == "color_range":
