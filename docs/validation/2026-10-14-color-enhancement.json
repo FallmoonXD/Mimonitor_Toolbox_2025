@@ -140,5 +140,34 @@
     "Native state verification; no optical remeasurement",
     "Current selected WB point read; no whole-table scan or reset"
   ],
-  "recovery_correction": "Historical calibration file did not include enhancement; previous zero profile differences did not validate the intended enhancement state."
+  "recovery_correction": "Historical calibration file did not include enhancement; previous zero profile differences did not validate the intended enhancement state.",
+  "actual_connected_window_buttons": [
+    {
+      "value": 1,
+      "feedback_ms": 2.87,
+      "completion_ms": 6937.58,
+      "native_verified": true
+    },
+    {
+      "value": 0,
+      "feedback_ms": 3.7,
+      "completion_ms": 6331.91,
+      "native_verified": true
+    }
+  ],
+  "local_install": {
+    "source_commit": "65926f067394bac1fb979e8c908d6820db21cdf5",
+    "executable_sha256": "5483609C7E3DAEE1D18409780160F6EE010AE82FBBD87B3A1839789042D67D8A",
+    "helper_sha256": "B9AE619C6F78D1918DFDEF1DB9FCBE7958EC1D08A80A5C30A08F44A808D20CF6",
+    "connected_and_responding": true,
+    "color_enhancement_buttons": [
+      "关",
+      "低",
+      "中",
+      "高"
+    ],
+    "checked": "关",
+    "native_enhancement_after_startup": 0,
+    "original_native_difference_count_after_startup": 0
+  }
 }
