@@ -77,7 +77,33 @@
     "device_menu_opened": false,
     "validation_device_write_calls": 0,
     "read_only_native_fields": 56,
-    "unit_tests": 499
+    "unit_tests": 499,
+    "after_getter": "Separate getter-only JAR with unique temporary result paths; bank, dovi and current WB selector guards stable",
+    "unchanged_native_fields": 55,
+    "observed_native_changes": {
+      "gamma_offset": {
+        "initial_label": "2",
+        "latest_label": "1",
+        "preserved_latest_value": true,
+        "user_confirmed_manual_adjustment": true
+      }
+    },
+    "rgb_cms_current_wb_unchanged": true,
+    "recovery_action": "Preserved user manual gamma adjustment; no calibration parameters written by layout validation.",
+    "final_user_profile": {
+      "dolby_fields_compared": 44,
+      "differences_other_than_user_gamma": 0,
+      "color_enhancement_present": false,
+      "current_dolby_color_enhancement": 0
+    }
   },
-  "local_deployment": "pending build"
+  "local_deployment": {
+    "source_commit": "da8dc560a81670edab6f3abeb57e3565ba28ab0e",
+    "executable_sha256": "E0D3A64D9BA383C800DA62E605206FFEDEE92F09535E7E93FA8BD395565D7744",
+    "helper_sha256": "B9AE619C6F78D1918DFDEF1DB9FCBE7958EC1D08A80A5C30A08F44A808D20CF6",
+    "responding": true,
+    "start_minimized": true,
+    "foreground_is_toolbox": false,
+    "foreground_window_unchanged": true
+  }
 }
