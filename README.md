@@ -34,7 +34,14 @@
 
 ## 开始使用
 
-目前提供源码，独立安装包尚未发布。
+从 [Releases](https://github.com/FallmoonXD/Mimonitor_Toolbox_2025/releases/latest) 下载 Windows 64 位版本：
+
+- **安装版**：运行 `MonitorToolbox2025-Setup.exe`，默认安装到当前用户目录。
+- **便携版**：解压 `MonitorToolbox2025-portable.zip` 后运行 `MonitorToolbox2025.exe`，无需安装 Python。
+
+两种版本都将设置保存在 `%LOCALAPPDATA%\.gpro_controller_2025`。
+
+### 从源码运行
 
 准备 Python 3.12，并在项目目录执行：
 
@@ -43,6 +50,8 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
 .\.venv\Scripts\python.exe monitor_controller.py
 ```
+
+### 连接显示器
 
 1. 确保显示器已开启无线 ADB，并与电脑处于同一局域网。
 2. 在工具箱中输入显示器 IP，或通过扫描发现设备并连接。

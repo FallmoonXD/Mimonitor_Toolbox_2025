@@ -35,6 +35,7 @@ jobs:
       - name: Run tests
         env:
           QT_QPA_PLATFORM: offscreen
+          MIMONITOR_ADB_SERVER_PORT: '5099'
           MIMONITOR_SETTINGS_PATH: ${{ runner.temp }}/mimonitor-2025-test-config.json
         run: python -m unittest discover -s tests -v
 
@@ -55,23 +56,12 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements-build.txt
 
-      - name: Build exe (onefile)
-        run: >-
-          python -m nuitka --onefile --enable-plugin=pyqt6
-          --windows-console-mode=disable
-          --windows-icon-from-ico=assets/app/icon.ico
-          --include-package=qfluentwidgets
-          --include-package-data=qfluentwidgets
-          --include-data-files=assets/runtime/adb.exe=assets/runtime/adb.exe
-          --include-data-files=assets/runtime/AdbWinApi.dll=assets/runtime/AdbWinApi.dll
-          --include-data-files=assets/runtime/AdbWinUsbApi.dll=assets/runtime/AdbWinUsbApi.dll
-          --include-data-files=assets/runtime/MtkDirectTool.jar=assets/runtime/MtkDirectTool.jar
-          --include-data-files=assets/runtime/ColorfulLedTool.jar=assets/runtime/ColorfulLedTool.jar
-          --include-data-files=assets/adb_guardian/adbguardian-signed.apk=assets/adb_guardian/adbguardian-signed.apk
-          --output-filename=MonitorToolbox2025.exe
-          --output-dir=dist-nuitka
-          --assume-yes-for-downloads
-          monitor_controller.py
+      - name: Check release version
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($env:GITHUB_REF_NAME -ne "v2025-$version") { throw 'Tag and VERSION disagree' }
+          "RELEASE_VERSION=$version" >> $env:GITHUB_ENV
 
       - name: Build standalone
         run: >-
@@ -80,6 +70,7 @@ jobs:
           --windows-icon-from-ico=assets/app/icon.ico
           --include-package=qfluentwidgets
           --include-package-data=qfluentwidgets
+          --include-data-dir=assets/app=assets/app
           --include-data-files=assets/runtime/adb.exe=assets/runtime/adb.exe
           --include-data-files=assets/runtime/AdbWinApi.dll=assets/runtime/AdbWinApi.dll
           --include-data-files=assets/runtime/AdbWinUsbApi.dll=assets/runtime/AdbWinUsbApi.dll
@@ -88,15 +79,17 @@ jobs:
           --include-data-files=assets/adb_guardian/adbguardian-signed.apk=assets/adb_guardian/adbguardian-signed.apk
           --output-filename=MonitorToolbox2025.exe
           --output-dir=dist-nuitka-standalone
+          --company-name=FallmoonXD
+          --product-name="Mimonitor Toolbox 2025"
+          --file-version=${{ env.RELEASE_VERSION }}
+          --product-version=${{ env.RELEASE_VERSION }}
           --assume-yes-for-downloads
           monitor_controller.py
 
       - name: Package portable zip
         shell: pwsh
         run: |
-          Rename-Item dist-nuitka-standalone\monitor_controller.dist MonitorToolbox2025-portable
-          Compress-Archive -Path dist-nuitka-standalone\MonitorToolbox2025-portable -DestinationPath MonitorToolbox2025-portable.zip
-          Rename-Item dist-nuitka-standalone\MonitorToolbox2025-portable monitor_controller.dist
+          & tools/package_portable.ps1
 
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
@@ -104,14 +97,33 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}" -replace '^v2025-', ''
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" "installer\MonitorToolbox.iss"
+          $candidates = @(
+            'C:\Program Files\Inno Setup 7\ISCC.exe',
+            'C:\Program Files (x86)\Inno Setup 7\ISCC.exe',
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe'
+          )
+          $compiler = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (!$compiler) { throw 'Inno Setup compiler not found' }
+          & $compiler "/DMyAppVersion=$env:RELEASE_VERSION" 'installer\MonitorToolbox.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Write checksums
+        shell: pwsh
+        run: |
+          $lines = foreach ($name in 'MonitorToolbox2025-Setup.exe', 'MonitorToolbox2025-portable.zip') {
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath "dist-installer/$name").Hash.ToLower()
+            "$hash  $name"
+          }
+          $lines | Set-Content -Encoding utf8NoBOM 'dist-installer/SHA256SUMS.txt'
+
+      - name: Create draft Release
+        uses: softprops/action-gh-release@v3
         with:
           files: |
-            dist-nuitka/MonitorToolbox2025.exe
-            MonitorToolbox2025-portable.zip
+            dist-installer/MonitorToolbox2025-portable.zip
             dist-installer/MonitorToolbox2025-Setup.exe
-          generate_release_notes: true
+            dist-installer/SHA256SUMS.txt
+          body_path: docs/releases/${{ env.RELEASE_VERSION }}.md
+          draft: true
+          fail_on_unmatched_files: true

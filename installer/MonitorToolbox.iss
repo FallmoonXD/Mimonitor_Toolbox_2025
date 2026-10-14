@@ -3,7 +3,7 @@
 ; CI 构建: ISCC /DMyAppVersion=<tag> installer\MonitorToolbox.iss
 
 #ifndef MyAppVersion
-#define MyAppVersion "0.0.0-dev"
+#define MyAppVersion "0.1.0"
 #endif
 
 #define MyAppName "红米 G Pro 27U 2025 Toolbox"
@@ -24,6 +24,8 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequired=lowest
+ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 
@@ -37,6 +39,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\dist-nuitka-standalone\monitor_controller.dist\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\README.upstream.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

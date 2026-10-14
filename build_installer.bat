@@ -4,6 +4,7 @@ rem 依赖 Inno Setup 便携版（ISCC 路径见下，或装到 Program Files 后用默认路径）。
 setlocal
 cd /d "%~dp0"
 set "PY=%~dp0.venv\Scripts\python.exe"
+set /p "APP_VERSION="<VERSION
 if not exist "%PY%" (
   python -m venv "%~dp0.venv"
   if errorlevel 1 exit /b 1
@@ -12,13 +13,18 @@ if not exist "%PY%" (
 set ISCC=%LOCALAPPDATA%\InnoSetup\ISCC.exe
 if not exist "%ISCC%" set ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe
 if not exist "%ISCC%" set ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe
+if not exist "%ISCC%" set ISCC=%ProgramFiles%\Inno Setup 7\ISCC.exe
+if not exist "%ISCC%" set ISCC=%ProgramFiles(x86)%\Inno Setup 7\ISCC.exe
 if not exist "%ISCC%" (
   echo [!] 未找到 Inno Setup ISCC.exe，仅产出便携 zip。可下载便携版解压到 %%LOCALAPPDATA%%\InnoSetup
   echo     https://jrsoftware.org/isdl.php
 )
 
 rem 1) standalone 构建（有产物则跳过，FORCE=1 强制重编）
-if not exist "dist-nuitka-standalone\monitor_controller.dist\MonitorToolbox2025.exe" (
+set "NEEDS_BUILD=0"
+if not exist "dist-nuitka-standalone\monitor_controller.dist\MonitorToolbox2025.exe" set "NEEDS_BUILD=1"
+if "%FORCE%"=="1" set "NEEDS_BUILD=1"
+if "%NEEDS_BUILD%"=="1" (
   "%PY%" -m nuitka ^
     --standalone ^
     --enable-plugin=pyqt6 ^
@@ -26,6 +32,15 @@ if not exist "dist-nuitka-standalone\monitor_controller.dist\MonitorToolbox2025.
     --windows-icon-from-ico=assets/app/icon.ico ^
     --include-package=qfluentwidgets ^
     --include-package-data=qfluentwidgets ^
+    --company-name=FallmoonXD ^
+    --product-name="Mimonitor Toolbox 2025" ^
+    --file-version=%APP_VERSION% ^
+    --product-version=%APP_VERSION% ^
+  --company-name=FallmoonXD ^
+  --product-name="Mimonitor Toolbox 2025" ^
+  --file-version=%APP_VERSION% ^
+  --product-version=%APP_VERSION% ^
+    --include-data-dir=assets/app=assets/app ^
     --include-data-files=assets/runtime/adb.exe=assets/runtime/adb.exe ^
     --include-data-files=assets/runtime/AdbWinApi.dll=assets/runtime/AdbWinApi.dll ^
     --include-data-files=assets/runtime/AdbWinUsbApi.dll=assets/runtime/AdbWinUsbApi.dll ^
@@ -45,7 +60,8 @@ if errorlevel 1 exit /b 1
 
 rem 3) Inno Setup 安装器
 if exist "%ISCC%" (
-  "%ISCC%" "installer\MonitorToolbox.iss"
+  "%ISCC%" "/DMyAppVersion=%APP_VERSION%" "installer\MonitorToolbox.iss"
+  if errorlevel 1 exit /b 1
 )
 
 echo Done!
