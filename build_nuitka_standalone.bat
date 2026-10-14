@@ -15,6 +15,7 @@ if not exist "%PY%" (
   --windows-icon-from-ico=assets/app/icon.ico ^
   --include-package=qfluentwidgets ^
   --include-package-data=qfluentwidgets ^
+  --include-data-dir=assets/app=assets/app ^
   --include-data-files=assets/runtime/adb.exe=assets/runtime/adb.exe ^
   --include-data-files=assets/runtime/AdbWinApi.dll=assets/runtime/AdbWinApi.dll ^
   --include-data-files=assets/runtime/AdbWinUsbApi.dll=assets/runtime/AdbWinUsbApi.dll ^

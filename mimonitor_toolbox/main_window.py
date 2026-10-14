@@ -8,7 +8,7 @@ import threading
 import time
 
 from PyQt6.QtCore import QRect, QTimer, Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QColor, QCursor, QIcon, QPainter, QPixmap
+from PyQt6.QtGui import QAction, QCursor, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -40,6 +40,7 @@ from .adb import (
 from .core import (
     ADJUSTABLE_HOTKEY_PARAMS,
     HOTKEY_EXTRA_VK,
+    bundled_resource_path,
     get_log_dir,
     load_settings,
     update_settings,
@@ -188,25 +189,8 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
     def setup_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
 
-        # Create a beautiful, crisp G Pro theme icon dynamically!
-        pixmap = QPixmap(32, 32)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor("#734EFF"))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(2, 2, 28, 28)
-        painter.setPen(QColor("white"))
-        font = painter.font()
-        font.setBold(True)
-        font.setPixelSize(18)
-        painter.setFont(font)
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "G")
-        painter.end()
-        icon = QIcon(pixmap)
-
-        self.tray_icon.setIcon(icon)
-        self.setWindowIcon(icon)
+        self.tray_icon.setIcon(QIcon(bundled_resource_path("assets", "app", "tray.ico")))
+        self.setWindowIcon(QIcon(bundled_resource_path("assets", "app", "icon.ico")))
         self.tray_icon.setToolTip("红米 G Pro 27U 2025 Toolbox")
 
         # 不调用 setContextMenu：那样右键会被 Qt 直接接管、activated 收不到
