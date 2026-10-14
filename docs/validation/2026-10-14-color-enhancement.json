@@ -1,0 +1,144 @@
+{
+  "date": "2026-10-14",
+  "device": "Redmi G Pro 27U 2025 / beekeeper",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "control": "g_video__vid_auto_color",
+  "database": "mitv.settings.db.video.color_booster",
+  "choices": {
+    "0": "关",
+    "1": "低",
+    "2": "中",
+    "3": "高"
+  },
+  "calibration_guard_native_fields": 40,
+  "cases": [
+    {
+      "input": "Dolby",
+      "value": 0,
+      "native": 0,
+      "database": 0,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "Dolby",
+      "value": 1,
+      "native": 1,
+      "database": 1,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "Dolby",
+      "value": 2,
+      "native": 2,
+      "database": 2,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "Dolby",
+      "value": 3,
+      "native": 3,
+      "database": 3,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "SDR",
+      "value": 0,
+      "native": 0,
+      "database": 0,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "SDR",
+      "value": 1,
+      "native": 1,
+      "database": 1,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "SDR",
+      "value": 2,
+      "native": 2,
+      "database": 2,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "SDR",
+      "value": 3,
+      "native": 3,
+      "database": 3,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "HDR",
+      "value": 0,
+      "native": 0,
+      "database": 0,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "HDR",
+      "value": 1,
+      "native": 1,
+      "database": 1,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "HDR",
+      "value": 2,
+      "native": 2,
+      "database": 2,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    },
+    {
+      "input": "HDR",
+      "value": 3,
+      "native": 3,
+      "database": 3,
+      "protected_difference_count": 0,
+      "native_verified": true,
+      "calibration_verified": true
+    }
+  ],
+  "roundtrip_difference_counts": {
+    "Dolby": 0,
+    "SDR": 0,
+    "HDR": 0
+  },
+  "final_original_difference_count": 0,
+  "final": {
+    "windows_hdr": true,
+    "windows_dolby_vision": true,
+    "native_bank": 13,
+    "dovi": 1,
+    "color_enhancement": 0
+  },
+  "preset_verification": "Native zero captured in snapshot; enhancement written last after PQ reloads; legacy values absent are skipped; final writer used to restore each hardware bank. Full preset hardware roundtrip remains a separate pending gate.",
+  "unit_tests": 496,
+  "limits": [
+    "Native state verification; no optical remeasurement",
+    "Current selected WB point read; no whole-table scan or reset"
+  ],
+  "recovery_correction": "Historical calibration file did not include enhancement; previous zero profile differences did not validate the intended enhancement state."
+}

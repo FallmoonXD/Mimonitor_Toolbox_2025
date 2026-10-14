@@ -2031,6 +2031,8 @@ class DisplayFeaturesMixin:
             result.update(self.adb.system_picture_option(option, value, expected_bank=bank))
         def success():
             self.values_signal.emit(result["readback"])
+            if option == "color_enhancement":
+                self._note_picture_change()
             self.log(title + ": " + name)
         self._run_adb_action(title, operation, success,
                              lambda: self._force_refresh_page("picturePage"))
@@ -2051,10 +2053,6 @@ class DisplayFeaturesMixin:
                 card.setToolTip(reason or ("未取得有效的原生读数" if not valid else ""))
             for button in getattr(self, "state_buttons", {}).get(key, {}).values():
                 button.setEnabled(valid and not button.property("controlPending"))
-        label = getattr(self, "system_color_status", None)
-        if label:
-            raw = values.get("g_video__vid_auto_color")
-            label.setText("颜色增强：" + {0: "关", 1: "低", 2: "中", 3: "高"}.get(raw, "未读取") + "。此开关会关闭色彩详细设定，当前仅显示状态。")
         label = getattr(self, "cms_status", None)
         if label:
             label.setText({0: "关", 1: "开"}.get(values.get("g_fusion_picture__color_tuner_enable"), "未读取"))

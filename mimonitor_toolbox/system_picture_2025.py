@@ -4,6 +4,7 @@ LEVELS = ((0, "关"), (1, "低"), (2, "中"), (3, "高"))
 # Framework gamma 0..8 converts to these native values; the resource labels are -4..4.
 GAMMA_OFFSETS = tuple(zip((4, 5, 3, 6, 2, 7, 1, 8, 9), map(str, range(-4, 5))))
 SYSTEM_OPTIONS = {
+    "color_enhancement": ("色彩增强", "g_video__vid_auto_color", ("mitv.settings.db.video.color_booster",), LEVELS),
     "gamma_offset": ("Gamma 偏移", "g_disp__disp_gamma", ("picture_gamma",), GAMMA_OFFSETS),
     "black_correction": ("黑色校正", "g_video__vid_black_stretch", ("picture_black_stretch",), LEVELS),
     "contrast_enhancement": ("对比度增强", "g_video__vid_luma", ("tv_picture_video_adaptive_luma_control",), LEVELS),
@@ -19,6 +20,13 @@ CMS_KEYS = ("g_fusion_picture__color_tuner_enable",) + tuple(
     "g_fusion_picture__color_tuner_" + axis + "_" + color
     for color in CMS_COLORS for axis in ("hue", "sat", "bri"))
 WB_KEYS = tuple("g_fusion_picture__pq_wb_cor_" + part for part in ("enable", "gain", "red", "green", "blue"))
+COLOR_CALIBRATION_KEYS = CMS_KEYS + tuple(
+    "g_fusion_picture__color_tuner_" + kind + "_" + color
+    for kind in ("gain", "offset") for color in ("r", "g", "b")
+) + WB_KEYS + ("g_video__clr_temp",) + tuple(
+    "g_video__clr_" + kind + "_" + color
+    for kind in ("gain", "offset") for color in "rgb"
+)
 SYSTEM_NATIVE_KEYS = tuple(dict.fromkeys(
     [item[1] for item in SYSTEM_OPTIONS.values()] + ["g_video__vid_auto_color", "g_video__vid_nr", "g_video__vid_gamma_mode"] + list(CMS_KEYS) + list(WB_KEYS)))
 

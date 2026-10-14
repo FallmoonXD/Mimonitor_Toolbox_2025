@@ -254,7 +254,7 @@ public class MtkDirectTool {
                     : ("g_video__vid_black_stretch".equals(key) || "g_video__vid_luma".equals(key)
                        || "g_video__vid_3d_nr".equals(key) || "g_video__vid_nr".equals(key)
                        || "g_video__vid_mpeg_nr".equals(key) || "g_video__vid_de_contour".equals(key)
-                       || "g_video__vid_local_contrast".equals(key))
+                       || "g_video__vid_local_contrast".equals(key) || "g_video__vid_auto_color".equals(key))
                        && value >= 0 && value <= 3;
                 if (!valid || checkedResultFile == null || bankBefore == null || doviBefore == null
                         || signalFamily(bankBefore, doviBefore) < 0) {

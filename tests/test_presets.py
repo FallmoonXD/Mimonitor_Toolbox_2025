@@ -55,6 +55,10 @@ class FakeAdb:
         self._record("osd_option", option, value)
         return {"warnings": []}
 
+    def system_picture_option(self, option, value, expected_bank=None):
+        self._record("system_picture_option", option, value, expected_bank)
+        return {"native_verified": True, "calibration_verified": True}
+
     def check_and_heal_jar(self):
         self._record("check_and_heal_jar")
 
@@ -141,9 +145,9 @@ class WriteOrderTests(unittest.TestCase):
 
         adb = FakeAdb()
         result = presets.apply_preset(adb, full_values(mode=15, color_temp=3))
-        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS) - 2)
+        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS) - 3)
         self.assertEqual(result.failed, [])
-        self.assertEqual([name for name, _ in result.skipped], ["动态清晰度", "暗区增强"])
+        self.assertEqual([name for name, _ in result.skipped], ["动态清晰度", "暗区增强", "色彩增强"])
 
     def test_conditional_items_are_skipped_not_failed(self):
         """默认（标准模式 + 非自定义色温）下应恰好跳过两个条件项，且不算失败。"""
@@ -152,9 +156,9 @@ class WriteOrderTests(unittest.TestCase):
         adb = FakeAdb()
         result = presets.apply_preset(adb, full_values())
         self.assertEqual(sorted(name for name, _ in result.skipped),
-                         ["HDR 色调映射", "动态清晰度", "暗区增强", "色增益"])
+                         ["HDR 色调映射", "动态清晰度", "暗区增强", "色增益", "色彩增强"])
         self.assertEqual(result.failed, [])
-        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS) - 4)
+        self.assertEqual(len(result.applied), len(presets.PICTURE_ITEMS) - 5)
 
 
 class ItemWriteSequenceTests(unittest.TestCase):

@@ -54,6 +54,7 @@ PICTURE_PRESET_SETTINGS_KEYS = (
 )
 
 PICTURE_PRESET_OPTIONAL_JNI_KEYS = (
+    "g_video__vid_auto_color",
     "g_video__vid_hdr_tone_mapping_mode",
     "g_video__clr_gain_r",
     "g_video__clr_gain_g",
@@ -292,6 +293,18 @@ def _needs_gamut(values):
     return True, ""
 
 
+def _needs_color_enhancement(values):
+    if values.get("g_video__vid_auto_color") is None:
+        return False, "旧预设未记录色彩增强，保持现状"
+    return True, ""
+
+
+def _apply_color_enhancement(adb, values):
+    key = "g_video__picture_mode" if values.get("g_video__picture_mode") is not None else "picture_mode"
+    return adb.system_picture_option("color_enhancement", _as_int(values, "g_video__vid_auto_color"),
+                                     expected_bank=_as_int(values, key))
+
+
 # 顺序即写入顺序。**FreeSync 第一、画面模式第二**，理由见模块文档字符串。
 PICTURE_ITEMS = (
     # FreeSync 排最前：它开着会把设备锁在游戏模式，必须先把它设成目标值
@@ -332,6 +345,8 @@ PICTURE_ITEMS = (
                 lambda adb, values: adb.osd_option("dark_enhancement", (_as_int(values, "picture_gamma_mode") >> 8) & 255),
                 _needs_dark_enhancement),
     PictureItem("color_range", "色彩动态范围", _apply_color_range, _needs_color_range),
+    # Apply after every mode/PQ reload, using native zero as a real saved value.
+    PictureItem("color_enhancement", "色彩增强", _apply_color_enhancement, _needs_color_enhancement),
 )
 
 

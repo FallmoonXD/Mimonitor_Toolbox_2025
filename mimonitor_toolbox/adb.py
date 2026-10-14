@@ -609,7 +609,7 @@ class Adb:
             return result
 
     def system_picture_option(self, option, value, expected_bank=None):
-        from .system_picture_2025 import system_option, system_option_block_reason
+        from .system_picture_2025 import COLOR_CALIBRATION_KEYS, system_option, system_option_block_reason
         _name, native, settings = system_option(option, value)
         with self.transaction():
             state = self.read_picture_state()
@@ -619,17 +619,28 @@ class Adb:
             reason = system_option_block_reason(option, bank, state["g_dovi_info__"])
             if reason:
                 raise RuntimeError(reason)
+            protected = list(COLOR_CALIBRATION_KEYS) if option == "color_enhancement" else []
+            baseline = self.jni_batch_get_or_single(protected, check=True) if protected else {}
+            if any(not isinstance(baseline.get(k), int) or baseline[k] < 0 for k in protected):
+                raise RuntimeError("校色参数未完整读取，停止调整色彩增强")
+            def verify_calibration(actual):
+                if any(actual.get(k) != baseline[k] for k in protected):
+                    raise RuntimeError("色彩增强写入后校色参数发生变化，未确认成功；请检查当前配置")
             results = {}
             for key, target in native.items():
                 result = self._checked_native_action("setSystemOption", [key, target, 3],
                     {key: target}, expected_bank=bank)
                 results.update(result["readback"])
+            if protected:
+                verify_calibration(self.jni_batch_get_or_single(protected, check=True))
             for key in settings:
                 self.put(key, int(value), check=True)
-            final = self.jni_batch_get_or_single(list(native) + ["g_video__picture_mode", "g_dovi_info__"], check=True)
+            final = self.jni_batch_get_or_single(list(native) + ["g_video__picture_mode", "g_dovi_info__"] + protected, check=True)
             if any(final.get(k) != v for k, v in native.items()) or final.get("g_video__picture_mode") != bank or final.get("g_dovi_info__") != state["g_dovi_info__"]:
                 raise RuntimeError("系统画面设置最终回读不一致或输入已变化")
-            return {"readback": results, "native_verified": True}
+            verify_calibration(final)
+            return {"readback": results, "native_verified": True,
+                    "calibration_verified": bool(protected)}
 
     def monitor_lights(self, updates):
         from .osd_2025 import LIGHT_KEYS, light_commands

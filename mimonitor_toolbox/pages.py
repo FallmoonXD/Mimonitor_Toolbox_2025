@@ -407,9 +407,6 @@ class PagesMixin:
                 ], state_key=native_key)
                 self.system_picture_cards.setdefault(option, []).append(card)
 
-        self.system_color_status = BodyLabel("颜色增强：未读取", container)
-        self.system_color_status.setWordWrap(True)
-        layout.addWidget(self.system_color_status)
         calibration = SimpleCardWidget(container)
         calibration_layout = QVBoxLayout(calibration)
         calibration_layout.addWidget(BodyLabel("色彩详细设定", calibration))
