@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-14",
+  "version": "0.1.0",
+  "tag": "v2025-0.1.0",
+  "build_commit": "938ee251a31c7fdda190e500a3aecee9128eeee9",
+  "windows_ci": "https://github.com/FallmoonXD/Mimonitor_Toolbox_2025/actions/runs/38551365984",
+  "unit_tests": 499,
+  "asset_sha256": {
+    "MonitorToolbox2025-Setup.exe": "4643e54b24647bbe864914f4819cc8b129323db03b42ac4e6527994aa9720023",
+    "MonitorToolbox2025-portable.zip": "d2623292ca54aede59283cb2882537e76ba2fdd337704396ab6314ea362943b2"
+  },
+  "required_icons_helpers_and_attribution_present": true,
+  "private_configuration_packaged": false,
+  "installer_roundtrip": {
+    "installer_exit_code": 0,
+    "uninstaller_exit_code": 0,
+    "user_registry_identity_verified": true,
+    "executable_hash_matches_portable": true,
+    "configuration_unchanged": true,
+    "uninstall_removed_test_application": true
+  },
+  "startup": {
+    "executable_sha256": "3145deddc78478e6d96db031d3a91554cf5e297ffac39d9ebaa65d2d66c5d420",
+    "helper_sha256": "b9ae619c6f78d1918dfdef1db9fcbe7958ec1d08a80a5c30a08f44a808d20cf6",
+    "portable_cold_start_verified": true,
+    "installed_cold_start_verified": true,
+    "responding": true,
+    "native_fields_compared": 56,
+    "native_differences": 0,
+    "configuration_unchanged": true,
+    "foreground_window_unchanged": true
+  },
+  "uninstall_registry_entries_after_upgrade": 1,
+  "launch_mode": "--minimized",
+  "scope": "Windows x64; publication gate covers packages and read-only calibration preservation. Pending hardware features remain described in release notes."
+}
