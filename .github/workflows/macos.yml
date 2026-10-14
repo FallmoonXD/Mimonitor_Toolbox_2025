@@ -13,7 +13,8 @@ on:
     # tags 必须写在 push 里面。之前误写在 on 下面与 push 同级，
     # 那不是合法的触发器键，导致整个工作流 0 秒就挂（workflow file issue）。
     tags:
-      - 'v[0-9]*'
+      - 'v*'
+      - '!v2025-*'
   pull_request:
     branches:
       - master
