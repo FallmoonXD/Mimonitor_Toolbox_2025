@@ -1969,6 +1969,15 @@ class DisplayFeaturesMixin:
         if key in self.state_buttons:
             for v, btn in self.state_buttons[key].items():
                 self._highlight_btn(btn, str(v) == str(val))
+        choice = getattr(self, "state_choices", {}).get(key)
+        if choice and key not in getattr(self, "_pending_controls", {}):
+            combo, _status = choice
+            blocked = combo.blockSignals(True)
+            try:
+                combo.setCurrentIndex(next((i for i in range(combo.count())
+                    if str(combo.itemData(i)) == str(val)), -1))
+            finally:
+                combo.blockSignals(blocked)
         if key == "picture_color_temperature":
             self._update_color_gain_visibility(val)
 
@@ -1986,6 +1995,13 @@ class DisplayFeaturesMixin:
         token = object()
         entry = {"token": token, "previous": self.current_vals.get(key), "buttons": [], "claimed": False}
         pending[key] = entry
+        choice = getattr(self, "state_choices", {}).get(key)
+        if choice:
+            combo, status = choice
+            entry["choice"] = (combo, status, combo.isEnabled())
+            combo.setProperty("controlPending", True)
+            combo.setEnabled(False)
+            status.setText("正在应用…")
         for option, button in buttons.items():
             entry["buttons"].append((button, button.text(), button.isEnabled()))
             self._highlight_btn(button, str(option) == str(value))
@@ -2007,6 +2023,11 @@ class DisplayFeaturesMixin:
         if entry is None or entry["token"] is not token:
             return
         pending.pop(key)
+        if "choice" in entry:
+            combo, status, enabled = entry["choice"]
+            combo.setProperty("controlPending", False)
+            combo.setEnabled(enabled)
+            status.setText("")
         for button, text, enabled in entry["buttons"]:
             button.setProperty("controlPending", False)
             button.setText(text)
@@ -2053,6 +2074,10 @@ class DisplayFeaturesMixin:
                 card.setToolTip(reason or ("未取得有效的原生读数" if not valid else ""))
             for button in getattr(self, "state_buttons", {}).get(key, {}).values():
                 button.setEnabled(valid and not button.property("controlPending"))
+            choice = getattr(self, "state_choices", {}).get(key)
+            if choice:
+                combo, _status = choice
+                combo.setEnabled(valid and not combo.property("controlPending"))
         label = getattr(self, "cms_status", None)
         if label:
             label.setText({0: "关", 1: "开"}.get(values.get("g_fusion_picture__color_tuner_enable"), "未读取"))

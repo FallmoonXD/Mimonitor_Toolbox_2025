@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-14",
+  "device": "Redmi G Pro 27U 2025 / beekeeper",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "settings_apk_sha256": "a987b8d3c65989c5154dcba1fc3247a7c05af2ca6441e29ac2bb03151a9c58f1",
+  "menu_order_sources": [
+    "DisplayDetailView",
+    "BrightnessView",
+    "ColorDetailView",
+    "SharpnessDetailView",
+    "ExpertDetailView"
+  ],
+  "groups": [
+    "亮度",
+    "色彩",
+    "清晰度",
+    "专业设置"
+  ],
+  "color_order": [
+    "饱和度",
+    "色调",
+    "色温",
+    "红色增益",
+    "绿色增益",
+    "蓝色增益",
+    "色彩增强",
+    "色域",
+    "色彩动态范围"
+  ],
+  "gamma_offset": {
+    "cards": 1,
+    "widget": "single-line ComboBox",
+    "options_label_native": [
+      [
+        "-4",
+        4
+      ],
+      [
+        "-3",
+        5
+      ],
+      [
+        "-2",
+        3
+      ],
+      [
+        "-1",
+        6
+      ],
+      [
+        "0",
+        2
+      ],
+      [
+        "1",
+        7
+      ],
+      [
+        "2",
+        1
+      ],
+      [
+        "3",
+        8
+      ],
+      [
+        "4",
+        9
+      ]
+    ],
+    "readback_sync_is_read_only": true,
+    "pending_feedback_and_failure_rollback": true
+  },
+  "verification": {
+    "offscreen_qt_layout": true,
+    "foreground_display_modes_switched": false,
+    "device_menu_opened": false,
+    "validation_device_write_calls": 0,
+    "read_only_native_fields": 56,
+    "unit_tests": 499
+  },
+  "local_deployment": "pending build"
+}

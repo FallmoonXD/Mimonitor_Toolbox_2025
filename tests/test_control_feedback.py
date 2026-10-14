@@ -75,6 +75,70 @@ class ControlFeedbackTests(unittest.TestCase):
             host.close(); host.deleteLater(); _app.processEvents()
 
 
+class ChoiceFeedbackHost(FeedbackHost):
+    def __init__(self):
+        super().__init__()
+        self.current_vals["gamma"] = 2
+        self._choice_section(self.layout(), "Gamma 偏移", [
+            (label, value, self.request) for value, label in GAMMA_OFFSETS
+        ], "gamma")
+        self._optimistic_highlight("gamma", 2)
+
+    def request(self, _checked):
+        self.command_count += 1
+        self.feedback = self._dispatching_control
+        self._pending_controls[self.feedback[0]]["claimed"] = True
+
+
+class ChoiceFeedbackTests(unittest.TestCase):
+    def test_native_readback_changes_selection_without_writing(self):
+        host = ChoiceFeedbackHost()
+        try:
+            combo, _status = host.state_choices["gamma"]
+            for native, label in GAMMA_OFFSETS:
+                host._optimistic_highlight("gamma", native)
+                self.assertEqual(combo.currentText(), label)
+                self.assertEqual(combo.currentData(), native)
+            self.assertEqual(host.command_count, 0)
+            host._optimistic_highlight("gamma", 99)
+            self.assertEqual(combo.currentIndex(), -1)
+        finally:
+            host.close(); host.deleteLater(); _app.processEvents()
+
+    def test_pending_selection_survives_stale_reads_and_rolls_back_on_failure(self):
+        host = ChoiceFeedbackHost()
+        try:
+            combo, status = host.state_choices["gamma"]
+            combo.setCurrentIndex(6)  # label 2, native 1
+            combo.activated.emit(6)
+            self.assertEqual(host.command_count, 1)
+            self.assertEqual(host.current_vals["gamma"], 2)
+            self.assertFalse(combo.isEnabled())
+            self.assertEqual(status.text(), "正在应用…")
+            host._optimistic_highlight("gamma", 2)
+            self.assertEqual(combo.currentData(), 1)
+            host._finish_control_feedback(*host.feedback, False)
+            self.assertEqual(combo.currentData(), 2)
+            self.assertTrue(combo.isEnabled())
+            self.assertEqual(status.text(), "")
+        finally:
+            host.close(); host.deleteLater(); _app.processEvents()
+
+    def test_success_displays_confirmed_native_value(self):
+        host = ChoiceFeedbackHost()
+        try:
+            combo, status = host.state_choices["gamma"]
+            combo.setCurrentIndex(6)
+            combo.activated.emit(6)
+            host.current_vals["gamma"] = 1
+            host._finish_control_feedback(*host.feedback, True)
+            self.assertEqual(combo.currentData(), 1)
+            self.assertEqual(combo.currentText(), "2")
+            self.assertEqual(status.text(), "")
+        finally:
+            host.close(); host.deleteLater(); _app.processEvents()
+
+
 class SystemPictureSafetyTests(unittest.TestCase):
     def test_gamma_mapping_is_not_linear(self):
         self.assertEqual(dict(GAMMA_OFFSETS), {4:"-4",5:"-3",3:"-2",6:"-1",2:"0",7:"1",1:"2",8:"3",9:"4"})

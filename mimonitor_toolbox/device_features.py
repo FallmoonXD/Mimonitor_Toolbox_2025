@@ -1413,6 +1413,10 @@ class DeviceFeaturesMixin:
                 if key == "picture_color_temperature":
                     self._update_color_gain_visibility(active_val)
 
+        for key in getattr(self, "state_choices", {}):
+            if key in vals:
+                self._optimistic_highlight(key, vals[key])
+
         if "tv_picture_light_sensor" in vals:
             self._sync_light_sensor_switch(str(vals["tv_picture_light_sensor"]).strip() == "1")
 

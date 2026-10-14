@@ -334,32 +334,20 @@ class PagesMixin:
         lf_layout.addLayout(detail_row)
         layout.addWidget(lf)
 
-        # Sliders
+        self.system_picture_cards = {}
+        layout.addWidget(SubtitleLabel("亮度", container))
         self._add_slider(layout, "背光", "backlight", 1, 100, 50, jni_key="g_disp__disp_back_light", settings_keys=["picture_backlight", "xiaomi_picture_backlight"])
-        self._add_slider(layout, "黑色级别", "black_level", 0, 100, 50, settings_keys=["picture_brightness"])
-        self._add_slider(layout, "对比度", "contrast", 0, 100, 50, settings_keys=["picture_contrast"])
-        self._add_slider(layout, "饱和度", "saturation", 0, 100, 50, settings_keys=["picture_saturation"])
-        self._add_slider(layout, "色调", "hue", 0, 100, 50, settings_keys=["picture_hue"])
-        self._add_slider(layout, "锐度", "sharpness", 0, 100, 1, settings_keys=["picture_sharpness"])
-
-        # Button Groups
-        self._btn_section(layout, "色温", [
-            ("冷色", 0, lambda _: self._set_color_temp(1, 0, "色温: 冷色")),
-            ("标准", 1, lambda _: self._set_color_temp(2, 1, "色温: 标准")),
-            ("暖色", 2, lambda _: self._set_color_temp(3, 2, "色温: 暖色")),
-            ("原色", 8, lambda _: self._set_color_temp(6, 8, "色温: 原色")),
-            ("自定义", 3, lambda _: self._set_color_temp(0, 3, "色温: 自定义")),
-        ], state_key="picture_color_temperature")
-        self._add_color_gain_slider(layout, "红色增益", "red_gain", "picture_red_gain", "g_video__clr_gain_r")
-        self._add_color_gain_slider(layout, "绿色增益", "green_gain", "picture_green_gain", "g_video__clr_gain_g")
-        self._add_color_gain_slider(layout, "蓝色增益", "blue_gain", "picture_blue_gain", "g_video__clr_gain_b")
-
         self._btn_section(layout, "精密控光", [
             ("关", 0, lambda _: self._jni("g_video__vid_local_dimming", 0, "picture_local_dimming", "精密控光: 关", "tv_picture_video_local_dimming")),
             ("低", 1, lambda _: self._jni("g_video__vid_local_dimming", 1, "picture_local_dimming", "精密控光: 低", "tv_picture_video_local_dimming")),
             ("中", 2, lambda _: self._jni("g_video__vid_local_dimming", 2, "picture_local_dimming", "精密控光: 中", "tv_picture_video_local_dimming")),
             ("高", 3, lambda _: self._jni("g_video__vid_local_dimming", 3, "picture_local_dimming", "精密控光: 高", "tv_picture_video_local_dimming")),
         ], state_key="picture_local_dimming")
+
+        self._add_slider(layout, "对比度", "contrast", 0, 100, 50, settings_keys=["picture_contrast"])
+        self._add_slider(layout, "黑色级别", "black_level", 0, 100, 50, settings_keys=["picture_brightness"])
+        for option in ("black_correction", "contrast_enhancement", "local_contrast"):
+            self._add_system_picture_option(layout, option)
 
         self.hdr_tone_mapping_card = self._btn_section(layout, "HDR 色调映射", [
             ("HGiG", 5, lambda _: self._set_native_hdr_tone_mapping(5, "HGiG")),
@@ -371,11 +359,20 @@ class PagesMixin:
         self.hdr_tone_mapping_card.layout().addWidget(self.hdr_tone_mapping_status)
         self._update_hdr_tone_mapping_visibility()
 
-        self._btn_section(layout, "灰阶响应时间", [
-            ("普通", 1, lambda _: self._jni("g_video__vid_od_response_time", 1, "picture_response_time", "响应时间: 普通")),
-            ("快速", 2, lambda _: self._jni("g_video__vid_od_response_time", 2, "picture_response_time", "响应时间: 快速")),
-            ("高速", 3, lambda _: self._jni("g_video__vid_od_response_time", 3, "picture_response_time", "响应时间: 高速")),
-        ], state_key="picture_response_time")
+        layout.addWidget(SubtitleLabel("色彩", container))
+        self._add_slider(layout, "饱和度", "saturation", 0, 100, 50, settings_keys=["picture_saturation"])
+        self._add_slider(layout, "色调", "hue", 0, 100, 50, settings_keys=["picture_hue"])
+        self._btn_section(layout, "色温", [
+            ("冷色", 0, lambda _: self._set_color_temp(1, 0, "色温: 冷色")),
+            ("标准", 1, lambda _: self._set_color_temp(2, 1, "色温: 标准")),
+            ("暖色", 2, lambda _: self._set_color_temp(3, 2, "色温: 暖色")),
+            ("原色", 8, lambda _: self._set_color_temp(6, 8, "色温: 原色")),
+            ("自定义", 3, lambda _: self._set_color_temp(0, 3, "色温: 自定义")),
+        ], state_key="picture_color_temperature")
+        self._add_color_gain_slider(layout, "红色增益", "red_gain", "picture_red_gain", "g_video__clr_gain_r")
+        self._add_color_gain_slider(layout, "绿色增益", "green_gain", "picture_green_gain", "g_video__clr_gain_g")
+        self._add_color_gain_slider(layout, "蓝色增益", "blue_gain", "picture_blue_gain", "g_video__clr_gain_b")
+        self._add_system_picture_option(layout, "color_enhancement")
 
         self.color_space_card = self._btn_section(layout, "色域", [
             ("自动", 0, lambda _: self._jni("g_video__vid_gamut_mapping_mode", 0, "tv_picture_advanced_video_color_space", "色域: 自动", "tv_picture_video_color_space")),
@@ -391,21 +388,25 @@ class PagesMixin:
             for value, name in OSD_OPTIONS["color_range"]
         ], state_key="tv_picture_video_hdmi_rgb_range")
 
-        layout.addWidget(SubtitleLabel("系统画面设置", container))
+        layout.addWidget(SubtitleLabel("清晰度", container))
+        self._add_slider(layout, "锐度", "sharpness", 0, 100, 1, settings_keys=["picture_sharpness"])
+        for option in ("super_resolution", "noise_reduction", "mpeg_nr", "smooth_gradient"):
+            self._add_system_picture_option(layout, option)
+
+        layout.addWidget(SubtitleLabel("专业设置", container))
         self.system_gamma_card = self._btn_section(layout, "Gamma", [
             (name, value, lambda _, v=value, n=name: self._set_osd_option("gamma_policy", v, n))
             for value, name in OSD_OPTIONS["gamma_policy"]
         ], state_key="system_gamma_policy")
-        self.system_picture_cards = {}
-        for option, (title, native_key, _settings, choices) in SYSTEM_OPTIONS.items():
-            for group in (choices[:5], choices[5:]):
-                if not group:
-                    continue
-                card = self._btn_section(layout, title, [
-                    (name, value, lambda _, opt=option, v=value, n=name: self._set_system_picture_option(opt, v, n))
-                    for value, name in group
-                ], state_key=native_key)
-                self.system_picture_cards.setdefault(option, []).append(card)
+        self._add_system_picture_option(layout, "gamma_offset")
+
+        wb_card = SimpleCardWidget(container)
+        wb_layout = QVBoxLayout(wb_card)
+        self.wb_status = BodyLabel("20 点白平衡：未读取", wb_card)
+        self.wb_status.setWordWrap(True)
+        wb_layout.addWidget(self.wb_status)
+        wb_layout.addWidget(CaptionLabel("仅显示当前点，刷新不会切换点位。", wb_card))
+        layout.addWidget(wb_card)
 
         calibration = SimpleCardWidget(container)
         calibration_layout = QVBoxLayout(calibration)
@@ -424,11 +425,14 @@ class PagesMixin:
                 self.cms_value_labels[key] = label
                 grid.addWidget(label, row, column)
         calibration_layout.addLayout(grid)
-        self.wb_status = BodyLabel("20 点白平衡：未读取", calibration)
-        self.wb_status.setWordWrap(True)
-        calibration_layout.addWidget(self.wb_status)
-        calibration_layout.addWidget(CaptionLabel("校色参数仅显示当前值。白平衡只读取当前点，刷新不会切换点位。", calibration))
+        calibration_layout.addWidget(CaptionLabel("校色参数仅显示当前值。", calibration))
         layout.addWidget(calibration)
+
+        self._btn_section(layout, "灰阶响应时间", [
+            ("普通", 1, lambda _: self._jni("g_video__vid_od_response_time", 1, "picture_response_time", "响应时间: 普通")),
+            ("快速", 2, lambda _: self._jni("g_video__vid_od_response_time", 2, "picture_response_time", "响应时间: 快速")),
+            ("高速", 3, lambda _: self._jni("g_video__vid_od_response_time", 3, "picture_response_time", "响应时间: 高速")),
+        ], state_key="picture_response_time")
         self._update_system_picture_controls()
 
         scroll.setWidget(container)
@@ -2067,6 +2071,42 @@ class PagesMixin:
         parent_layout.addWidget(card)
         self.color_gain_cards.append(card)
         card.setVisible(False)
+
+    def _add_system_picture_option(self, parent_layout, option):
+        title, key, _settings, choices = SYSTEM_OPTIONS[option]
+        commands = [(name, value, lambda _, opt=option, v=value, n=name:
+                     self._set_system_picture_option(opt, v, n)) for value, name in choices]
+        if option == "gamma_offset":
+            card = self._choice_section(parent_layout, title, commands, key)
+        else:
+            card = self._btn_section(parent_layout, title, commands, state_key=key)
+        self.system_picture_cards[option] = [card]
+        return card
+
+    def _choice_section(self, parent_layout, title, choices, state_key):
+        card = SimpleCardWidget(self)
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(15, 10, 15, 10)
+        title_label = BodyLabel(title, card)
+        title_label.setFixedWidth(180)
+        layout.addWidget(title_label)
+        combo = ComboBox(card)
+        combo.setMinimumWidth(140)
+        combo.setPlaceholderText("未读取")
+        for name, value, _command in choices:
+            combo.addItem(name, userData=value)
+        combo.setCurrentIndex(-1)
+        status = CaptionLabel("", card)
+        layout.addWidget(combo)
+        layout.addWidget(status)
+        layout.addStretch(1)
+        if not hasattr(self, "state_choices"):
+            self.state_choices = {}
+        self.state_choices[state_key] = (combo, status)
+        combo.activated.connect(lambda index: self._dispatch_state_button(
+            state_key, choices[index][1], choices[index][2]) if index >= 0 else None)
+        parent_layout.addWidget(card)
+        return card
 
     def _btn_section(self, parent_layout, title, buttons, state_key=None):
         card = SimpleCardWidget(self)
