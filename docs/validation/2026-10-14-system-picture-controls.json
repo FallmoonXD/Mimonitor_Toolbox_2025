@@ -862,14 +862,14 @@
     {
       "mode": "SDR",
       "gamma_policy": 1,
-      "visual_feedback_ms": 2.4,
-      "verified_completion_ms": 4289.4
+      "verified_completion_ms": 4289.4,
+      "button_state_updated_ms": 2.4
     },
     {
       "mode": "SDR",
       "gamma_policy": 0,
-      "visual_feedback_ms": 1.9,
-      "verified_completion_ms": 4291.5
+      "verified_completion_ms": 4291.5,
+      "button_state_updated_ms": 1.9
     },
     {
       "mode": "HDR",
@@ -878,14 +878,14 @@
     {
       "mode": "HDR",
       "gamma_policy": 1,
-      "visual_feedback_ms": 1.5,
-      "verified_completion_ms": 4052.3
+      "verified_completion_ms": 4052.3,
+      "button_state_updated_ms": 1.5
     },
     {
       "mode": "HDR",
       "gamma_policy": 0,
-      "visual_feedback_ms": 1.5,
-      "verified_completion_ms": 4335.7
+      "verified_completion_ms": 4335.7,
+      "button_state_updated_ms": 1.5
     },
     {
       "mode": "Dolby",
@@ -894,14 +894,14 @@
     {
       "mode": "Dolby",
       "gamma_policy": 1,
-      "visual_feedback_ms": 1.5,
-      "verified_completion_ms": 4570.3
+      "verified_completion_ms": 4570.3,
+      "button_state_updated_ms": 1.5
     },
     {
       "mode": "Dolby",
       "gamma_policy": 0,
-      "visual_feedback_ms": 1.1,
-      "verified_completion_ms": 4343.2
+      "verified_completion_ms": 4343.2,
+      "button_state_updated_ms": 1.1
     }
   ],
   "offline_tests_passed": 487,
@@ -942,5 +942,35 @@
   "local_dimming": "Shared setting; restored using the configured SDR/HDR linkage instead of assuming per-bank persistence",
   "WB20_scope": "Current selected point and enable state only; no table scan, point change or reset",
   "final_windows_output": "Original HDR on / Dolby Vision on, native bank 13, dovi flag 1",
-  "optical_validation": false
+  "optical_validation": false,
+  "GUI_timing_method": "Qt button state sampled immediately after QTest mouseClick; not physical display scanout timing",
+  "installed_verification": {
+    "SDR": {
+      "native_fields": 50,
+      "database_fields": 112,
+      "profile_differences": {},
+      "probe_changes": {},
+      "local_dimming": 0
+    },
+    "HDR": {
+      "native_fields": 50,
+      "database_fields": 112,
+      "profile_differences": {},
+      "probe_changes": {},
+      "local_dimming": 2
+    },
+    "Dolby": {
+      "native_fields": 50,
+      "database_fields": 112,
+      "profile_differences": {},
+      "probe_changes": {},
+      "local_dimming": 2
+    }
+  },
+  "installed_artifact": {
+    "source_commit": "514667adb677f9783ca2fcebbe250824a81e6283",
+    "executable_sha256": "6C6678779AE478811E8C568EB80FC9A497F650501D3BF533A22EFA3101F9F354",
+    "helper_sha256": "93F416EFE0A87DF68C77D1431592244278A821CEE956637158759B00D3DC5A70"
+  },
+  "installed_visible_window_and_UI_Automation_controls_verified": true
 }

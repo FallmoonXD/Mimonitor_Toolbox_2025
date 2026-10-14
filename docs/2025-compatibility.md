@@ -80,4 +80,6 @@ Windows 的开关行为也见 [Microsoft HDR 设置说明](https://support.micro
 
 直接通过 ADB 核对完整系统画面菜单的资源、配置和底层接口，补充 Gamma、Gamma 偏移、黑色校正、对比度增强、降噪及超分辨率；CMS 与当前白平衡点保持只读。105 项原生参数逐档检查中，102 项通过，SDR 游戏模式的平滑渐变三档回读仍为关，已限制对应入口。系统菜单禁用或隐藏的模式限制同样保留。
 
-实际窗口点击后的待应用反馈为 1.1–2.4 毫秒，画面页完整刷新为 1.1–1.34 秒；设备写入回读仍需要约 4 秒，不将即时高亮当成已经写入成功。487 项本地测试通过。详情见 [系统画面设置](2025-system-picture-settings.md) 与 [脱敏验收数据](validation/2026-10-14-system-picture-controls.json)。
+实际窗口点击后的按钮待应用状态在 1.1–2.4 毫秒内更新，画面页完整刷新为 1.1–1.34 秒；设备写入回读仍需要约 4 秒，不将即时高亮当成已经写入成功。计时采样的是 Qt 控件状态，不是显示器扫描输出。487 项本地测试通过。
+
+新版 standalone 已安装并启动，通过 Windows UI Automation 核对新增控件及当前 WB 点。随后用独立只读 getter 分别复核 SDR、HDR、Dolby 各 50 个原生字段与 112 个画质字段：校色记录无差异、读取不改变参数，已安装程序的精密控光联动为 SDR 0、HDR 2、Dolby 2。最终恢复 HDR 开、Dolby 开。详情见 [系统画面设置](2025-system-picture-settings.md) 与 [脱敏验收数据](validation/2026-10-14-system-picture-controls.json)。
