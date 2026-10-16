@@ -38,6 +38,10 @@ class FakeAdb:
         self._record("get", key, check)
         return self.source
 
+    def jni_get(self, key, check=False):
+        self._record("jni_get", key, check)
+        return 1
+
     def refresh_pq(self, check=False):
         self._record("refresh_pq", check)
 
@@ -206,10 +210,10 @@ class ItemWriteSequenceTests(unittest.TestCase):
         self.assertEqual(adb.calls, [("put", "picture_contrast", "60", True)])
 
     def test_color_temp_maps_xiaomi_enum_to_mtk(self):
-        """色温 settings 存小米枚举、JNI 存 MTK 枚举，必须映射。"""
+        """预设存界面枚举；Global 和 JNI 均存转换后的 MTK 枚举。"""
         calls = self._calls_for(full_values(color_temp=2))
         self.assertIn(("jni_set", "g_video__clr_temp", 3, 3, True), calls)
-        self.assertIn(("put", "picture_color_temperature", "2", True), calls)
+        self.assertIn(("put", "picture_color_temperature", "3", True), calls)
 
     def test_hdr_tone_mapping_writes_both_enums_separately(self):
         """两个键存不同枚举：MTK 5 / UI 0，不能写同一份值。"""
@@ -516,9 +520,9 @@ class FreeSyncPresetTests(unittest.TestCase):
                 item.apply(adb, values)
         return adb.calls
 
-    def test_hdmi_uses_freesync_switch_with_three_for_on(self):
+    def test_hdmi_normal_mode_uses_one_for_on(self):
         calls = self._apply("23", 1)
-        self.assertIn(("jni_set", "g_video__freesync_switch", 3, 3, True), calls)
+        self.assertIn(("jni_set", "g_video__freesync_switch", 1, 3, True), calls)
         self.assertIn(("refresh_pq", True), calls)
 
     def test_hdmi_off_writes_zero(self):
@@ -541,7 +545,7 @@ class FreeSyncPresetTests(unittest.TestCase):
         self.assertEqual(presets.freesync_jni_key("30"), "g_video__dp_adaptive_sync")
         self.assertEqual(presets.freesync_jni_key("23"), "g_video__freesync_switch")
         self.assertEqual(presets.freesync_jni_key(" 29 "), "g_video__dp_adaptive_sync")
-        self.assertEqual(presets.freesync_on_value("g_video__freesync_switch"), 3)
+        self.assertEqual(presets.freesync_on_value("g_video__freesync_switch"), 1)
         self.assertEqual(presets.freesync_on_value("g_video__dp_adaptive_sync"), 1)
         self.assertTrue(presets.freesync_is_on("g_video__freesync_switch", "3"))
         self.assertFalse(presets.freesync_is_on("g_video__freesync_switch", "0"))

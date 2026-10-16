@@ -46,11 +46,10 @@ class NativeModeControlTests(unittest.TestCase):
         target = adb_runtime.Adb("192.168.1.9")
         with mock.patch.object(target, "read_picture_state", side_effect=[state(), state(59)]) as read, \
                 mock.patch.object(target, "_checked_native_action", return_value={"warnings": []}) as setter, \
-                mock.patch.object(target, "put") as put:
+                mock.patch.object(target, "put_many") as put:
             result = target.picture_mode(59, expected_bank=13)
         setter.assert_called_once_with("setPictureMode", [59, 3], {"g_video__picture_mode": 59}, expected_bank=13)
-        self.assertEqual(put.call_args_list, [mock.call("picture_mode", "59", check=True),
-                                             mock.call("picture_mode_dolby", "59", check=True)])
+        put.assert_called_once_with({"picture_mode": 59, "picture_mode_dolby": 59}, check=True)
         self.assertEqual(read.call_count, 2)
         self.assertEqual(result["state"], state(59))
 
@@ -68,7 +67,7 @@ class NativeModeControlTests(unittest.TestCase):
         target = adb_runtime.Adb("192.168.1.9")
         with mock.patch.object(target, "read_picture_state", side_effect=[state(), state(16, 0)]), \
                 mock.patch.object(target, "_checked_native_action", return_value={}), \
-                mock.patch.object(target, "put"):
+                mock.patch.object(target, "put_many"):
             with self.assertRaisesRegex(RuntimeError, "未确认最终生效值"):
                 target.picture_mode(59)
 
@@ -110,6 +109,12 @@ class NativeSignalUiTests(unittest.TestCase):
         self.window._cleanup_done = True
         self.window.deleteLater()
         self.qt.processEvents()
+
+    def test_320hz_buttons_stay_disabled_when_disconnected(self):
+        window = self.window
+        window._apply_polled_values(state())
+        self.assertFalse(window.mode_320_card.isEnabled())
+        self.assertTrue(all(not button.isEnabled() for button in window.state_buttons['mode_320'].values()))
 
     def test_windows_hdr_stays_on_while_native_dolby_switch_refreshes_the_ui(self):
         window = self.window

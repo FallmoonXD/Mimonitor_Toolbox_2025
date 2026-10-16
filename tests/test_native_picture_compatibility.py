@@ -124,28 +124,25 @@ class NativeActionResultTests(unittest.TestCase):
         result = adb_runtime.parse_native_action_result(tone_receipt(provider_return=0), "setHdrToneMapping", self.expected)
         self.assertEqual(result["warnings"], [])
 
-    def test_checked_action_uses_helper_class_and_cleans_its_own_result(self):
+    def test_checked_action_uses_session_and_a_unique_receipt(self):
         target = adb_runtime.Adb("192.168.1.9")
         with mock.patch.object(target, "check_and_heal_jar"), \
                 mock.patch.object(target, "read_picture_state", return_value={"g_video__picture_mode": 16, "g_dovi_info__": 0}), \
-                mock.patch.object(target, "shell", side_effect=[tone_receipt(), ""]) as shell, \
+                mock.patch.object(target, "_session_call", return_value=tone_receipt()) as call, \
                 mock.patch.object(adb_runtime.uuid, "uuid4", return_value=SimpleNamespace(hex="abc")):
             result = target.hdr_tone_mapping(5, check=True)
-        command = shell.call_args_list[0].args[0]
-        self.assertIn("MtkDirectTool\\${IFS}setHdrToneMappingChecked", command)
-        self.assertIn(".mtk_action_abc.txt", command)
+        call.assert_called_once_with("native", ["setHdrToneMappingChecked", 5, 3, 16,
+            "/sdcard/Download/Mimonitor_Toolbox/.mtk_action_abc.txt"])
         self.assertEqual(result["provider_return"], -1)
-        self.assertEqual(shell.call_args_list[-1].args[0],
-                         "rm -f /sdcard/Download/Mimonitor_Toolbox/.mtk_action_abc.txt")
 
-    def test_checked_action_cleans_result_when_validation_fails(self):
+    def test_checked_action_does_not_repeat_write_when_validation_fails(self):
         target = adb_runtime.Adb("192.168.1.9")
         with mock.patch.object(target, "check_and_heal_jar"), \
                 mock.patch.object(target, "read_picture_state", return_value={"g_video__picture_mode": 16, "g_dovi_info__": 0}), \
-                mock.patch.object(target, "shell", side_effect=[tone_receipt(readback=0), ""]) as shell:
+                mock.patch.object(target, "_session_call", return_value=tone_receipt(readback=0)) as call:
             with self.assertRaises(RuntimeError):
                 target.hdr_tone_mapping(5, check=True)
-        self.assertTrue(shell.call_args_list[-1].args[0].startswith("rm -f /sdcard/Download/Mimonitor_Toolbox/.mtk_action_"))
+        self.assertEqual(call.call_count, 1)
 
     def test_preflight_bank_mismatch_stops_before_color_temperature_or_rgb_writes(self):
         target = adb_runtime.Adb("192.168.1.9")

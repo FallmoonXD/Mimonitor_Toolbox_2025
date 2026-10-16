@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 
 import _isolation  # noqa: F401
@@ -23,6 +24,26 @@ class JavaNativeReceiptTests(unittest.TestCase):
                                 '"' + (cls.root / "legacy-result.txt").as_posix() + '"')
         files = {
             "MtkDirectTool.java": source,
+            "ToolboxSession.java": (Path(__file__).resolve().parents[1] / "tools/mtk_direct/ToolboxSession.java").read_text(encoding="utf-8"),
+            "dalvik/system/PathClassLoader.java": """package dalvik.system;
+public class PathClassLoader extends ClassLoader {
+ public PathClassLoader(String path,String libraries,ClassLoader parent){super(parent);}
+}
+""",
+            "SessionHarness.java": """import java.io.File;
+public class SessionHarness {
+ public static void main(String[] args) throws Exception {
+  // Simulate Binder threads that outlive main() unless the worker exits explicitly.
+  new Thread(() -> {try {Thread.sleep(600000);}catch(Exception ignored){}}).start();
+  ToolboxSession.runSessionAndExit(new File(args[0]),args[1],Boolean.parseBoolean(args[2]));
+ }
+}
+""",
+            "ColorfulLedTool.java": """import com.mediatek.twoworlds.tv.TVNative;
+public class ColorfulLedTool {
+ private static int setColorfulLed(int mode,int color){TVNative.writes++;return 0;}
+}
+""",
             "android/util/Log.java": """package android.util;
 public class Log { public static int d(String t,String m){return 0;} public static int e(String t,String m){return 0;} }
 """,
@@ -30,6 +51,7 @@ public class Log { public static int d(String t,String m){return 0;} public stat
 public class TVNative {
  public static int result=0, tone=0, forced=-2, bank=16, dovi=0, writes=0, red=1024, green=1024, blue=1024;
  public static int getConfigValue_native(int n,String k) {
+  if(k.equals("test_write_count")) return writes;
   if(k.equals("g_video__picture_mode")) return bank;
   if(k.equals("g_dovi_info__")) return dovi;
   if(forced!=-2) return forced;
@@ -39,6 +61,7 @@ public class TVNative {
   return tone;
  }
  public static int afterDovi=-1;
+ public static int getMinMaxConfigValue_native(int n,String k){return n==0?0:100;}
  public static int setConfigValue_native(int n,String k,int v,int u) {
   writes++; if(result==0){ if(k.equals("g_video__picture_mode")) bank=v; else tone=v; }
   if(afterDovi>=0)dovi=afterDovi;
@@ -199,3 +222,97 @@ public class ReceiptHarness {
         output = self.receipt(action="mode", before=13, expected=13, dovi=1, target=59, after_dovi=0)
         with self.assertRaisesRegex(RuntimeError, "杜比信号变化"):
             parse_native_action_result(output, "setPictureMode", {"g_video__picture_mode": 59})
+
+    def start_session(self, readonly=False):
+        from mimonitor_toolbox.helper_session import HelperSession
+        directory = Path(tempfile.mkdtemp(dir=self.root))
+        session = HelperSession(None)
+        process = subprocess.Popen([shutil.which("java"), "-cp", str(self.root), "SessionHarness",
+                                    str(directory), session.token, str(readonly).lower()],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        def cleanup():
+            try:
+                session.call("close", [""])
+                process.wait(timeout=3)
+            except Exception:
+                process.kill()
+                process.wait(timeout=3)
+                self.fail("Worker did not exit after closing its session")
+        self.addCleanup(cleanup)
+        deadline = time.monotonic() + 5
+        while not (directory / "ready").exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertTrue((directory / "ready").exists(), "Java worker did not start")
+        session.port = int((directory / "ready").read_text().splitlines()[2])
+        return session
+
+    def session_values(self, session, *keys):
+        from mimonitor_toolbox.adb import parse_jni_batch_output
+        return parse_jni_batch_output(session.call("native", ["getBatch", *keys,
+            "/sdcard/Download/Mimonitor_Toolbox/.mtk_action_a1.txt"]))
+
+    def test_session_reuses_process_but_reads_live_values_and_clears_failed_receipts(self):
+        session = self.start_session()
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], 0)
+        self.assertEqual(session.call("native", ["set", "g_video__brightness", 42, 3]), "0")
+        self.assertEqual(self.session_values(session, "g_video__brightness"), {"g_video__brightness": 42})
+        output = session.call("native", ["setPictureModeChecked", 15, 3, 13,
+            "/sdcard/Download/Mimonitor_Toolbox/.mtk_action_b2.txt"])
+        with self.assertRaisesRegex(RuntimeError, "Picture bank changed"):
+            parse_native_action_result(output, "setPictureMode", {"g_video__picture_mode": 15})
+        state = parse_native_picture_state(session.call("native", ["getPictureState",
+            "/sdcard/Download/Mimonitor_Toolbox/.mtk_action_c3.txt"]))
+        self.assertEqual(state["g_video__picture_mode"], 16)
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], 1)
+
+    def test_readonly_worker_rejects_setters_before_any_native_write(self):
+        session = self.start_session(readonly=True)
+        with self.assertRaisesRegex(RuntimeError, "Read-only session"):
+            session.call("native", ["set", "g_video__brightness", 42, 3])
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], 0)
+
+    def test_session_authentication_failure_does_not_execute_a_setter(self):
+        session = self.start_session()
+        token = session.token
+        session.token = "invalid"
+        with self.assertRaisesRegex(RuntimeError, "authentication failed"):
+            session.call("native", ["set", "g_video__brightness", 42, 3])
+        session.token = token
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], 0)
+
+    def test_lost_setter_reply_does_not_repeat_the_write(self):
+        import socket
+        import struct
+        session = self.start_session()
+        payload = (session.token + "\nnative\nset\ng_video__brightness\n42\n3").encode()
+        with socket.create_connection(("127.0.0.1", session.port)) as connection:
+            connection.sendall(struct.pack(">I", len(payload)) + payload)
+            size = struct.unpack(">I", session._receive(connection, 4))[0]
+            self.assertEqual(session._receive(connection, size), b"READY")
+            connection.sendall(struct.pack(">I", 2) + b"GO")
+        # The next request is processed after the setter, without replaying it.
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], 1)
+
+    def test_abandoned_request_is_not_executed_without_live_client_ack(self):
+        import socket
+        import struct
+        session = self.start_session()
+        payload = (session.token + "\nnative\nset\ng_video__brightness\n42\n3").encode()
+        with socket.create_connection(("127.0.0.1", session.port)) as connection:
+            connection.sendall(struct.pack(">I", len(payload)) + payload)
+            size = struct.unpack(">I", session._receive(connection, 4))[0]
+            self.assertEqual(session._receive(connection, size), b"READY")
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], 0)
+
+    def test_session_led_dispatch_matches_all_2025_menu_protocol_values(self):
+        session = self.start_session()
+        commands = [(effect, color) for effect in range(1, 5) for color in range(1, 13)]
+        commands += [(5, 0), (5, 1)] + [(0, color) for color in range(12)]
+        for mode, color in commands:
+            output = session.call("led", [mode, color])
+            self.assertEqual(output, f"mode={mode}\ncolor={color}\nreturn=0\n__complete=1\n")
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], len(commands))
+        for mode, color in [(5, 2), (0, 12), (1, 0), (11, 5)]:
+            with self.assertRaisesRegex(RuntimeError, "Invalid LED command"):
+                session.call("led", [mode, color])
+        self.assertEqual(self.session_values(session, "test_write_count")["test_write_count"], len(commands))

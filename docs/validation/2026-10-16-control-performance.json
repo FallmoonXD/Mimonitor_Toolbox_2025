@@ -1,0 +1,38 @@
+{
+  "native_fields_compared": 69,
+  "native_differences": {},
+  "configuration_unchanged": true,
+  "installed_button_low_verified": true,
+  "installed_button_restored": true,
+  "windows_displays": [
+    {
+      "model": "XMI27B3",
+      "width": 3840,
+      "height": 2160,
+      "frequency": 160
+    }
+  ],
+  "date": "2026-10-16",
+  "model": "Redmi G Pro 27U 2025",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "offline_tests_passed": 522,
+  "source_ui_unique_successful_cases": 271,
+  "windows_hdr_enabled": true,
+  "dolby_signal_verified": true,
+  "local_install_started_and_connected": true,
+  "mode_320_readonly": true,
+  "mode_320_output_verified": false,
+  "normal_mode_freesync_on_completion_ms": 441.82,
+  "normal_mode_freesync_edid_after": 3,
+  "median_completion_ms": {
+    "ordinary_sliders": 329,
+    "color_temperature": 355,
+    "lighting": 491,
+    "gamma_offset": 541,
+    "hdr_tone_mapping": 643,
+    "color_enhancement": 681,
+    "picture_modes": 725,
+    "rgb_gains": 1199,
+    "crosshair": 2087
+  }
+}

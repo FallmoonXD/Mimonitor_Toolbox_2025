@@ -22,6 +22,8 @@ $env:MIMONITOR_SETTINGS_PATH = Join-Path $env:TEMP ('mimonitor-2025-tests-' + [g
 
 Java 回执用例使用模拟 native/Provider 接口，编译并执行实际 helper 回执代码。本机有 `javac` 和 `java` 时执行；没有 JDK 时跳过相应用例。
 
+调节响应优化的实现、只读实机耗时及待验收范围见 [调节响应优化](2025-control-performance.md)。Java helper 改动后，按 [helper 构建说明](../tools/mtk_direct/README.md) 重编内置 JAR；测试会核对源码摘要。
+
 2026-10-13 原生模式控制改动的完整 465 项本地测试通过，包含实际 Java helper 代码的模拟回执测试。实机结果与尚待验收的操作见 [兼容记录](2025-compatibility.md)。
 
 同日本地部署的 Nuitka standalone 构建发现旧标题栏 slot 在控件删除后仍响应标题变化；修复后增加回归用例，466 项测试通过。已部署程序并验证可见窗口与实机连接；该本地构建未创建发布标签。
@@ -47,6 +49,8 @@ Java 回执用例使用模拟 native/Provider 接口，编译并执行实际 hel
 GitHub Actions 在 `main` 推送或 PR 时执行测试；只有 `v2025-*` 标签触发发布构建。标签版本必须与 `VERSION` 一致。发布构建包含应用和托盘图标、上游署名、便携包、当前用户安装器及 SHA256 校验文件，先创建草稿 Release。下载草稿附件核对哈希并完成打包程序、安装及卸载验收后，再发布该 Release。
 
 首版为 `v2025-0.1.0`，应用和安装器版本均为 0.1.0。安装器默认使用当前用户目录，不要求管理员权限；应用配置仍位于 `%LOCALAPPDATA%\.gpro_controller_2025`。本地重新编译可设置 `FORCE=1` 后运行 `build_installer.bat`。
+
+v0.2.0 增加 `assets/display/`，所有构建入口均包含兼容 EDID 模板和管理员配置脚本。Python 控制器使用 ctypes 调用目标屏的 CCD、DXGI 和显示模式接口，不依赖 pywin32。正式按钮与恢复流程的实机记录见 [v0.2.0 验收](validation/2026-10-16-release-0.2.0.json)。安装器的目录及 AppId 沿用首版，升级验收核对实际发布附件、用户配置与显示器参数。
 
 ## 桌面身份与配置
 

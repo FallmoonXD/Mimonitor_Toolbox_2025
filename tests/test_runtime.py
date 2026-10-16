@@ -321,6 +321,11 @@ class AdbRuntimeTests(unittest.TestCase):
                 events.append(args)
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             ip = "192.168.5.205"
 
             def transaction(self):
@@ -360,6 +365,11 @@ class AdbRuntimeTests(unittest.TestCase):
                 events.append(args)
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             ip = "192.168.5.205"
 
             def transaction(self):
@@ -787,6 +797,11 @@ class StateMachineTests(unittest.TestCase):
                 dialog_count.append(1)
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             def transaction(self):
                 return nullcontext()
 
@@ -845,6 +860,11 @@ class StateMachineTests(unittest.TestCase):
                 pass
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             def transaction(self):
                 return nullcontext()
 
@@ -932,6 +952,11 @@ class StateMachineTests(unittest.TestCase):
                         pass
 
                 class FakeAdb:
+                    def put_many(self, updates, check=False, refresh=False):
+                        for key, value in updates.items():
+                            self.put(key, str(value), check=check)
+                        if refresh: self.refresh_pq(check=check)
+
                     def transaction(self):
                         return nullcontext()
 
@@ -1029,6 +1054,11 @@ class StateMachineTests(unittest.TestCase):
                 emitted.append((self.name, args))
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             def transaction(self):
                 return nullcontext()
 
@@ -1140,6 +1170,11 @@ class StateMachineTests(unittest.TestCase):
                 pass
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             def transaction(self):
                 return nullcontext()
 
@@ -1174,6 +1209,11 @@ class StateMachineTests(unittest.TestCase):
         calls = []
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             def transaction(self):
                 return nullcontext()
 
@@ -1227,7 +1267,7 @@ class StateMachineTests(unittest.TestCase):
         fake = FakeApp()
         app.App._set_hdr_tone_mapping(fake, 2, "动态")
 
-        self.assertIn(("heal_jar",), calls)
+        self.assertNotIn(("heal_jar",), calls)
         self.assertIn(("hdr_tone", 2, True), calls)
         self.assertIn(("put", "picture_hdr_tone_mapping", "2", True), calls)
         self.assertIn(("put", "settings_display_hdr_color_tone", "2", True), calls)
@@ -1334,6 +1374,11 @@ class StateMachineTests(unittest.TestCase):
                 self.adb.depth -= 1
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             depth = 0
 
             def transaction(self):
@@ -1391,6 +1436,11 @@ class StateMachineTests(unittest.TestCase):
         calls = []
 
         class FakeAdb:
+            def put_many(self, updates, check=False, refresh=False):
+                for key, value in updates.items():
+                    self.put(key, str(value), check=check)
+                if refresh: self.refresh_pq(check=check)
+
             def jni_batch_get(self, keys):
                 calls.append(("batch", tuple(keys)))
                 return {"a": 1}

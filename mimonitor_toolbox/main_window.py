@@ -544,6 +544,9 @@ class App(PagesMixin, DisplayFeaturesMixin, DeviceFeaturesMixin, FluentWindow):
         else:
             with _adb_command_lock:
                 try:
+                    close_session = getattr(self.adb, "close_helper_session", None)
+                    if callable(close_session):
+                        close_session()
                     if self.adb.ip:
                         adb_run(["disconnect", self.adb.serial], timeout=3)
                 except Exception:

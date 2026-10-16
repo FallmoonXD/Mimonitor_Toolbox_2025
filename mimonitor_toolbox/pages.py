@@ -475,10 +475,24 @@ class PagesMixin:
             for value, name in OSD_OPTIONS["dark_enhancement"]
         ], state_key="osd_dark_enhancement")
 
-        self._btn_section(layout, "320Hz竞技模式", [
+        self.dolby_pc_card = self._btn_section(layout, "杜比视界 PC", [
+            ("关", 0, lambda _: self._set_pc_dolby("off")),
+            ("开", 1, lambda _: self._set_pc_dolby("on")),
+        ], state_key="dolby_pc")
+        self.dolby_pc_restore = PushButton("恢复原配置", self.dolby_pc_card)
+        self.dolby_pc_restore.clicked.connect(lambda: self._set_pc_dolby("restore"))
+        self.dolby_pc_card.layout().addWidget(self.dolby_pc_restore)
+        self.dolby_pc_hint = BodyLabel("需要 Windows 已具备杜比支持；切换时会短暂重新连接目标屏。", container)
+        self.dolby_pc_hint.setWordWrap(True)
+        layout.addWidget(self.dolby_pc_hint)
+
+        self.mode_320_card = self._btn_section(layout, "320Hz竞技模式", [
             ("关", 0, lambda _: self._320(False)),
             ("开", 1, lambda _: self._320(True)),
         ], state_key="mode_320")
+        self.mode_320_hint = BodyLabel("连接 HDMI 输入后可切换刷新率档位。", container)
+        self.mode_320_hint.setWordWrap(True)
+        layout.addWidget(self.mode_320_hint)
 
         self._btn_section(layout, "FreeSync Premium Pro", [
             ("关", 0, lambda _: self._fsync(False)),
@@ -2008,7 +2022,7 @@ class PagesMixin:
 
         _debounce_timer = QTimer(card)
         _debounce_timer.setSingleShot(True)
-        _debounce_timer.setInterval(300)
+        _debounce_timer.setInterval(120)
 
         def on_commit():
             if not self.check_connection():
@@ -2021,7 +2035,7 @@ class PagesMixin:
                         self.adb.jni_set(jni_key, v, check=True)
                         self.adb.refresh_pq(check=True)
                     if settings_keys:
-                        for k in settings_keys: self.adb.put(k, str(v), check=True)
+                        self.adb.put_many({k: str(v) for k in settings_keys}, check=True)
             def success():
                 self.log(f"{title}: {v}")
                 self._note_picture_change()
@@ -2031,6 +2045,7 @@ class PagesMixin:
                 operation,
                 success,
                 lambda: self._force_refresh_page("picturePage"),
+                coalesce_key=f"setting:{settings_keys[0] if settings_keys else jni_key}",
             )
 
         _debounce_timer.timeout.connect(on_commit)
@@ -2061,7 +2076,7 @@ class PagesMixin:
 
         _debounce_timer = QTimer(card)
         _debounce_timer.setSingleShot(True)
-        _debounce_timer.setInterval(300)
+        _debounce_timer.setInterval(120)
 
         def on_commit():
             self._set_color_gain(title, settings_key, jni_key, slider.value())

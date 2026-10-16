@@ -18,7 +18,29 @@ The color gain command uses the factory white-balance API
 as one group. Writing the three `g_video__clr_gain_*` keys independently can
 make the firmware restore untouched channels to `1024`.
 
-Rebuild the bundled jar from `MtkDirectTool.java` after changing this source.
+Rebuild the bundled jar after changing either Java source:
+
+```powershell
+python tools/build_native_helper.py --android-jar <android.jar> --d8 <d8.bat>
+```
+
+The build includes `MtkDirectTool` and `ToolboxSession`. Its source digest is
+checked by the offline tests so the bundled DEX cannot silently lag the source.
+
+The desktop now starts `ToolboxSession <unique-session-directory>` once and
+reuses its TV class loader over an authenticated ADB loopback forward. Requests
+and responses use length-prefixed UTF-8 frames. A READY/GO exchange prevents
+abandoned queued commands from executing later. A lost reply never replays a
+setter. Each native action resets its receipt fields and still performs fresh
+native reads and the existing checked-write guards. Receipts return directly
+over the socket; no shared result file or logcat is used by the desktop.
+The worker also dispatches the existing ColorfulLedTool driver method without
+starting another JVM. It exits after ten minutes without a connection.
+
+`ToolboxSession <directory> readonly` rejects every action except `getBatch`
+and `getPictureState`; this mode is used for nondisruptive device latency checks.
+`getBatch <key...> <result-file>` uses the versioned receipt protocol and has no
+fixed settling delay. Legacy one-shot commands remain available.
 
 `getPictureState <result-file>` is getter-only. It reads the native picture mode,
 Dolby signal flag, and HDR tone, including scene/signal guards before and after.

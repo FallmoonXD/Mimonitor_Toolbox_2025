@@ -1,0 +1,364 @@
+{
+  "version": "0.2.0",
+  "source_validation_date": "2026-10-16",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "source": "HDMI1",
+  "freesync": true,
+  "method": "Actual Qt buttons invoke production Windows/ADB controllers; native readback and CCD target timings after each action",
+  "cases": [
+    {
+      "control": "PC Dolby enable",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 11.809,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "320 enable with Dolby",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 13.395,
+      "actual_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 5
+    },
+    {
+      "control": "PC Dolby off at 320Hz",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 14.57,
+      "actual_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "native_mode": 16,
+      "native_dolby_input": 0,
+      "native_edid": 5
+    },
+    {
+      "control": "PC Dolby on at 320Hz",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 14.387,
+      "actual_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 5
+    },
+    {
+      "control": "320 disable returns to 4K Dolby",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 11.473,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby disable ordinary HDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 13.782,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 16,
+      "native_dolby_input": 0,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby re-enable",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.798,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "320 failure restores previous signal",
+      "expected_success": false,
+      "actual_success": false,
+      "seconds": 14.674,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "Restore original EDID",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 11.056,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby off again",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 12.611,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 16,
+      "native_dolby_input": 0,
+      "native_edid": 3
+    },
+    {
+      "control": "Restore original after HDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 11.737,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby enable for restore at 320",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.824,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "320 enable for restore",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 12.926,
+      "actual_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 5
+    },
+    {
+      "control": "Restore original directly from 320",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 14.11,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "Enable PC Dolby for rollback test",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 12.831,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "PC profile failure restores previous EDID and signal",
+      "expected_success": false,
+      "actual_success": false,
+      "seconds": 18.434,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby already on does not reconnect",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 0.726,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "320 on",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 13.804,
+      "actual_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 5
+    },
+    {
+      "control": "320 already on does not reconnect",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 0.668,
+      "actual_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 5
+    },
+    {
+      "control": "320 off",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.335,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 13,
+      "native_dolby_input": 1,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby already enabled preserves Windows SDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 0.649,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 10,
+      "native_dolby_input": 0,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby off preserves Windows SDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 7.612,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 10,
+      "native_dolby_input": 0,
+      "native_edid": 3
+    },
+    {
+      "control": "PC Dolby on preserves Windows SDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 9.591,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 10,
+      "native_dolby_input": 0,
+      "native_edid": 3
+    },
+    {
+      "control": "Restore original preserves Windows SDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.64,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native_mode": 10,
+      "native_dolby_input": 0,
+      "native_edid": 3
+    }
+  ],
+  "restoration": {
+    "Dolby_native_fields_compared": 69,
+    "Dolby_native_differences": {},
+    "SDR_native_fields_compared": 69,
+    "SDR_native_differences": {},
+    "HDR_roundtrip_native_differences": {},
+    "original_edid_restored": true,
+    "configuration_unchanged": true
+  },
+  "failure_injections": [
+    "Windows mode selection failure after activating native 320 EDID",
+    "PC profile verification failure after registry replacement"
+  ],
+  "limits": [
+    "One GPU/driver, firmware and HDMI connection; FreeSync enabled",
+    "Windows restart and long game workload persistence not tested",
+    "Requires existing Windows Dolby components and enabled Dolby mode"
+  ]
+}

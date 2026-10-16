@@ -18,6 +18,32 @@ public class MtkDirectTool {
     private static Integer bankBefore;
     private static Integer doviBefore;
     private static final StringBuilder checkedResult = new StringBuilder();
+    private static ClassLoader sessionLoader;
+    private static boolean sessionActive;
+    private static String lastResult;
+
+    public static void prepareSession() throws Exception {
+        sessionLoader = tvClassLoader();
+        Class.forName("com.mediatek.twoworlds.tv.TVNative", true, sessionLoader);
+    }
+
+    public static String executeSession(String[] args) throws Exception {
+        if (args.length == 0 || !(args[0].equals("set") || args[0].equals("getBatch")
+                || args[0].equals("getPictureState") || args[0].equals("setColorGainsChecked")
+                || args[0].equals("setHdrToneMappingChecked") || args[0].equals("setPictureModeChecked")
+                || args[0].equals("setOsdOptionChecked") || args[0].equals("setSystemOptionChecked")
+                || args[0].equals("setHdrToneMapping") || args[0].equals("setColorGains")))
+            throw new IllegalArgumentException("Unsupported session action");
+        checkedResultFile = null;
+        checkedResult.setLength(0);
+        readOnlyAction = false;
+        expectedBank = -1;
+        bankBefore = doviBefore = null;
+        lastResult = "";
+        sessionActive = true;
+        run(args);
+        return checkedResultFile == null ? lastResult : checkedResult.toString();
+    }
 
     private static void receipt(String key, Object value) {
         checkedResult.append(key).append('=').append(value).append('\n');
@@ -101,7 +127,8 @@ public class MtkDirectTool {
     }
 
     private static void writeResult(String value) {
-        writeFile(RESULT_FILE, value);
+        lastResult = value;
+        if (!sessionActive) writeFile(RESULT_FILE, value);
     }
 
     private static void writeBatchResult(String value) {
@@ -109,6 +136,7 @@ public class MtkDirectTool {
     }
 
     private static ClassLoader tvClassLoader() throws Exception {
+        if (sessionLoader != null) return sessionLoader;
         return (ClassLoader) Class.forName("dalvik.system.PathClassLoader")
                 .getConstructor(String.class, String.class, ClassLoader.class)
                 .newInstance(TV_CLASSPATH, NATIVE_LIB_PATH, ClassLoader.getSystemClassLoader());
@@ -192,6 +220,11 @@ public class MtkDirectTool {
     }
 
     public static void main(String[] args) throws Exception {
+        run(args);
+        System.exit(0);
+    }
+
+    private static void run(String[] args) throws Exception {
         if (args.length == 0) {
             log("Usage: MtkDirectTool <get/set/batchGet/getMinMax/setColorGains/setHdrToneMapping/dump> [args]");
             return;
@@ -200,12 +233,13 @@ public class MtkDirectTool {
         String cmd = args[0];
         if (cmd.equals("setColorGainsChecked") || cmd.equals("setHdrToneMappingChecked")
                 || cmd.equals("setPictureModeChecked") || cmd.equals("setOsdOptionChecked")
-                || cmd.equals("setSystemOptionChecked") || cmd.equals("getPictureState")) {
+                || cmd.equals("setSystemOptionChecked") || cmd.equals("getPictureState") || cmd.equals("getBatch")) {
             int required = cmd.equals("setColorGainsChecked") || cmd.equals("setOsdOptionChecked") || cmd.equals("setSystemOptionChecked") ? 6 : 5;
             if (cmd.equals("getPictureState")) required = 2;
+            if (cmd.equals("getBatch")) required = args.length >= 3 ? args.length : 3;
             if (args.length != required) throw new IllegalArgumentException("Invalid checked action arguments");
             checkedResultFile = args[args.length - 1];
-            if (!cmd.equals("getPictureState")) expectedBank = Integer.parseInt(args[args.length - 2]);
+            if (!cmd.equals("getPictureState") && !cmd.equals("getBatch")) expectedBank = Integer.parseInt(args[args.length - 2]);
             if (!checkedResultFile.matches("/sdcard/Download/Mimonitor_Toolbox/\\.mtk_action_[a-f0-9]+\\.txt")) {
                 throw new IllegalArgumentException("Invalid checked result path");
             }
@@ -217,7 +251,16 @@ public class MtkDirectTool {
 
         try {
             ClassLoader classLoader = tvClassLoader();
-            if (checkedResultFile != null) checkBank(classLoader, expectedBank);
+            if (checkedResultFile != null && !"getBatch".equals(cmd)) checkBank(classLoader, expectedBank);
+
+            if ("getBatch".equals(cmd)) {
+                readOnlyAction = true;
+                for (int i = 1; i < args.length - 1; i++) {
+                    if (!args[i].matches("[A-Za-z0-9_]+")) throw new IllegalArgumentException("Invalid native key");
+                    readReceipt(classLoader, args[i], args[i]);
+                }
+                return;
+            }
 
             if ("getPictureState".equals(cmd)) {
                 readOnlyAction = true;
@@ -375,11 +418,9 @@ public class MtkDirectTool {
         } finally {
             if (checkedResultFile != null) {
                 receipt("__complete", 1);
-                writeFile(checkedResultFile, checkedResult.toString());
-                System.exit(0);
+                if (!sessionActive) writeFile(checkedResultFile, checkedResult.toString());
             }
         }
 
-        System.exit(0);
     }
 }

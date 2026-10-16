@@ -2,6 +2,7 @@
 
 import logging
 import os
+import shlex
 import socket
 import subprocess
 import sys
@@ -11,7 +12,6 @@ import uuid
 from .picture_modes import picture_signal_family, validate_mode_target
 
 from .core import (
-    MTK_BATCH_RESULT_FILE,
     bundled_resource_path,
     get_app_data_dir,
     get_colorful_led_tool_path,
@@ -406,11 +406,37 @@ class Adb:
     def __init__(self, ip=""):
         self.ip = ip
         self._verified_jars = {}
+        self._helper_session = None
     @property
     def serial(self):
         return format_adb_serial(self.ip)
     def transaction(self):
         return _adb_command_lock
+    def close_helper_session(self, expected_serial=None):
+        with self.transaction():
+            if self._helper_session is not None:
+                if expected_serial is not None and self._helper_session.identity[0] != expected_serial:
+                    return
+                self._helper_session.close(stop=True)
+                self._helper_session = None
+    def _session_call(self, tool, arguments):
+        from .helper_session import HelperSession
+        with self.transaction():
+            session = self._helper_session
+            if session is not None and not session.matches():
+                session.close(stop=True)
+                session = self._helper_session = None
+            if session is None:
+                session = self._helper_session = HelperSession(self).start()
+            try:
+                return session.call(tool, arguments)
+            except OSError:
+                # Only connection establishment raises OSError. Once bytes were
+                # sent, call() raises RuntimeError and must never replay writes.
+                session.close()
+                self._helper_session = None
+                self._helper_session = HelperSession(self).start()
+                return self._helper_session.call(tool, arguments)
     def shell(self, cmd, check=False):
         out = adb_run(["-s", self.serial, "shell", cmd], check=check)
         return out
@@ -514,6 +540,24 @@ class Adb:
     def put(self, k, v, check=False):
         _adb_log(f"settings put {k} = {v}")
         return self.shell(f"settings put global {k} {v}", check=check)
+    def put_many(self, updates, check=False, refresh=False):
+        if len(updates) == 1 and not refresh:
+            key, value = next(iter(updates.items()))
+            return self.put(key, value, check=check)
+        commands = [f"settings put global {shlex.quote(str(k))} {shlex.quote(str(v))}"
+                    for k, v in updates.items()]
+        if refresh:
+            commands.append("am broadcast -a com.xiaomi.mitv.action.PIC_MODE_CHANGED --ei picmode 7")
+        return self.shell(" && ".join(commands), check=check) if commands else ""
+
+    def get_many(self, keys, check=False):
+        keys = tuple(keys)
+        wanted = set(keys)
+        values = dict(line.split("=", 1) for line in self.shell("settings list global", check=check).splitlines()
+                      if "=" in line)
+        if check and wanted - values.keys():
+            raise RuntimeError("设置回读缺少字段：" + ", ".join(sorted(wanted - values.keys())))
+        return {key: values.get(key, "null") for key in keys}
     def key(self, k, check=False):
         _adb_log(f"keyevent {k}")
         return self.shell(f"input keyevent {k}", check=check)
@@ -530,11 +574,33 @@ class Adb:
             )
     def jni_set(self, key, val, upd=3, check=False):
         _adb_log(f"jni_set {key} = {val}")
-        jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
-        command = build_tvservice_app_process_command(
-            jar, ["MtkDirectTool", "set", key, val, upd]
-        )
-        return self.shell(command, check=check)
+        result = self._session_call("native", ["set", key, int(val), int(upd)]).strip()
+        if check and result != "0":
+            raise RuntimeError(f"原生 setter 未确认成功：{key}，返回 {result}")
+        return result
+
+    def monitor_refresh_mode(self, enabled):
+        from .osd_2025 import hdmi_refresh_mode_target
+        with self.transaction():
+            source = self.get("mitv.tvplayer.hdmi.last.source", check=True).strip()
+            if source not in ("23", "24"):
+                raise RuntimeError("320Hz 切换目前仅完成 HDMI 实机验证")
+            if enabled:
+                state = self.read_picture_state()
+                if picture_signal_family(state.get("g_video__picture_mode"), state.get("g_dovi_info__")) != "SDR":
+                    raise RuntimeError("320Hz 切换目前仅完成 SDR 实机验证")
+            key = "g_fusion_picture__hdmi_edid_version"
+            fs_key = "g_video__freesync_switch"
+            before = self.jni_batch_get_or_single([key, fs_key], check=True)
+            target, mi_version = hdmi_refresh_mode_target(enabled, before.get(key), before.get(fs_key))
+            if before[key] != target:
+                self.jni_set(key, target, check=True)
+                self.shell("am broadcast -f 0x10000000 -a mitv.hdmi.action.EDID_VERSION_CHANGE "
+                           "-p com.xiaomi.mitv.tvplayer --ei edid_version " + str(mi_version), check=True)
+            after = self.jni_batch_get_or_single([key, fs_key], check=True)
+            if after.get(key) != target or after.get(fs_key) != before[fs_key]:
+                raise RuntimeError("HDMI 档位或 FreeSync 回读不一致，请刷新后重试")
+            return after
     def hdr_tone_mapping(self, val, upd=3, check=False, expected_bank=None):
         _adb_log(f"hdr_tone_mapping = {val}")
         if check:
@@ -545,22 +611,14 @@ class Adb:
                 raise RuntimeError("画面场景已变化，请刷新后重试")
             return self._checked_native_action("setHdrToneMapping", [val, upd],
                 {"g_video__vid_hdr_tone_mapping_mode": val}, expected_bank=state["g_video__picture_mode"])
-        jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
-        command = build_tvservice_app_process_command(
-            jar, ["MtkDirectTool", "setHdrToneMapping", val, upd]
-        )
-        return self.shell(command, check=check)
+        return self._session_call("native", ["setHdrToneMapping", val, upd])
     def jni_set_color_gains(self, red, green, blue, check=False, expected_bank=None):
         _adb_log(f"jni_set_color_gains r={red} g={green} b={blue}")
         if check:
             return self._checked_native_action("setColorGains", [red, green, blue],
                 {"g_video__clr_gain_r": red, "g_video__clr_gain_g": green, "g_video__clr_gain_b": blue},
                 expected_bank=expected_bank)
-        jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
-        command = build_tvservice_app_process_command(
-            jar, ["MtkDirectTool", "setColorGains", red, green, blue]
-        )
-        return self.shell(command, check=check)
+        return self._session_call("native", ["setColorGains", red, green, blue])
 
     def require_picture_bank(self, expected_bank, timeout=0):
         deadline = time.monotonic() + timeout
@@ -594,7 +652,7 @@ class Adb:
                 source = self.get("mitv.tvplayer.hdmi.last.source", check=True).strip()
                 if source not in ("23", "24") or family == "Dolby Vision":
                     raise RuntimeError("色彩动态范围需要 HDMI SDR 或 HDR 输入")
-            native = self.jni_batch_get_or_single(["g_video__vid_gamma_mode"], check=True)
+            native = self.jni_batch_get_or_single(["g_video__vid_gamma_mode"], check=True) if option in ("gamma_policy", "dark_enhancement") else {}
             key, target = native_option_value(option, value, native)
             result = self._checked_native_action("setOsdOption", [key, target, 3],
                                                 {key: target}, expected_bank=bank)
@@ -633,8 +691,7 @@ class Adb:
                 results.update(result["readback"])
             if protected:
                 verify_calibration(self.jni_batch_get_or_single(protected, check=True))
-            for key in settings:
-                self.put(key, int(value), check=True)
+            self.put_many({key: int(value) for key in settings}, check=True)
             final = self.jni_batch_get_or_single(list(native) + ["g_video__picture_mode", "g_dovi_info__"] + protected, check=True)
             if any(final.get(k) != v for k, v in native.items()) or final.get("g_video__picture_mode") != bank or final.get("g_dovi_info__") != state["g_dovi_info__"]:
                 raise RuntimeError("系统画面设置最终回读不一致或输入已变化")
@@ -647,28 +704,16 @@ class Adb:
         if not updates or set(updates) - set(LIGHT_KEYS):
             raise ValueError("无效的炫彩灯选项")
         with self.transaction():
-            values = {key: self.get(key, check=True).strip() for key in LIGHT_KEYS}
+            values = self.get_many(LIGHT_KEYS, check=True)
             values.update(updates)
             commands = light_commands(values)
-            self.check_and_heal_colorful_led_tool(check=True)
             for mode, color in commands:
-                path = f"/sdcard/Download/Mimonitor_Toolbox/.led_action_{uuid.uuid4().hex}.txt"
-                command = build_tvservice_app_process_command(
-                    "/data/data/mitv.service/cache/ColorfulLedTool.jar",
-                    ["ColorfulLedTool", "raw", mode, color, path])
-                try:
-                    output = self.shell("mkdir -p /sdcard/Download/Mimonitor_Toolbox; "
-                        f"{command} >/dev/null; "
-                        f"i=0; while [ $i -lt 30 ] && [ ! -f {path} ]; do sleep 0.1; i=$((i+1)); done; "
-                        f"cat {path} 2>/dev/null", check=True)
-                    receipt = dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
-                    if receipt != {"mode": str(mode), "color": str(color), "return": "0", "__complete": "1"}:
-                        raise RuntimeError("炫彩灯驱动未确认写入")
-                finally:
-                    self.shell(f"rm -f {path}")
-            for key in updates:
-                self.put(key, int(values[key]), check=True)
-            actual = {key: int(self.get(key, check=True).strip()) for key in LIGHT_KEYS}
+                output = self._session_call("led", [mode, color])
+                receipt = dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
+                if receipt != {"mode": str(mode), "color": str(color), "return": "0", "__complete": "1"}:
+                    raise RuntimeError("炫彩灯驱动未确认写入")
+            self.put_many({key: int(values[key]) for key in updates}, check=True)
+            actual = {key: int(value) for key, value in self.get_many(LIGHT_KEYS, check=True).items()}
             if actual != {key: int(values[key]) for key in LIGHT_KEYS}:
                 raise RuntimeError("炫彩灯菜单回读不一致")
             return actual
@@ -678,10 +723,11 @@ class Adb:
         if value not in (0, 1):
             raise ValueError("无效的帧率显示选项")
         with self.transaction():
-            self.put("key_free_sync_frame_enable", value, check=True)
-            output = self.shell("am startservice -n com.xiaomi.mitv.tvplayer/.service.TVPlayerService "
-                                "-a com.xiaomi.intent.action.frameview", check=True)
-            if "Error" in output or self.get("key_free_sync_frame_enable", check=True).strip() != str(value):
+            output = self.shell(f"settings put global key_free_sync_frame_enable {value} && "
+                                "am startservice -n com.xiaomi.mitv.tvplayer/.service.TVPlayerService "
+                                "-a com.xiaomi.intent.action.frameview && "
+                                "settings get global key_free_sync_frame_enable", check=True)
+            if "Error" in output or not output.strip().splitlines() or output.strip().splitlines()[-1] != str(value):
                 raise RuntimeError("帧率显示未确认，请刷新后重试")
             return value
 
@@ -696,9 +742,10 @@ class Adb:
             value = validate_mode_target(value, bank, dovi)
             result = self._checked_native_action("setPictureMode", [value, upd],
                 {"g_video__picture_mode": value}, expected_bank=bank)
-            self.put("picture_mode", str(value), check=True)
+            settings = {"picture_mode": value}
             if dovi == 1:
-                self.put("picture_mode_dolby", str(value), check=True)
+                settings["picture_mode_dolby"] = value
+            self.put_many(settings, check=True)
             actual = self.read_picture_state()
             if actual["g_video__picture_mode"] != value or actual["g_dovi_info__"] != dovi:
                 raise RuntimeError("同步数据库后输入或画面模式变化，未确认最终生效值")
@@ -713,18 +760,8 @@ class Adb:
     def _native_helper_result(self, command_action, arguments, parser):
         result_file = f"/sdcard/Download/Mimonitor_Toolbox/.mtk_action_{uuid.uuid4().hex}.txt"
         with self.transaction():
-            self.check_and_heal_jar()
-            command = build_tvservice_app_process_command(
-                "/data/data/mitv.service/cache/MtkDirectTool.jar",
-                ["MtkDirectTool", command_action] + list(arguments) + [result_file],
-            )
             try:
-                output = self.shell(
-                    "mkdir -p /sdcard/Download/Mimonitor_Toolbox; "
-                    f"{command} >/dev/null; "
-                    f"i=0; while [ $i -lt 30 ] && [ ! -f {result_file} ]; do sleep 0.1; i=$((i+1)); done; "
-                    f"cat {result_file} 2>/dev/null", check=True,
-                )
+                output = self._session_call("native", [command_action] + list(arguments) + [result_file])
                 result = parser(output)
                 self._confirm_remote_jar("MtkDirectTool.jar", get_mtk_direct_tool_path())
                 _adb_log(f"{command_action} verified: {result}")
@@ -732,22 +769,11 @@ class Adb:
             except Exception:
                 self._verified_jars.pop("MtkDirectTool.jar", None)
                 raise
-            finally:
-                self.shell(f"rm -f {result_file}")
     def jni_get(self, key, check=False):
-        with self.transaction():
-            jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
-            self.shell("logcat -c", check=check)
-            command = build_tvservice_app_process_command(
-                jar, ["MtkDirectTool", "get", key]
-            )
-            self.shell(command, check=check)
-            time.sleep(0.8)
-            log = self.shell(f"logcat -d | grep 'GET {key}' | tail -1", check=check)
-        i = log.find("= ")
-        if check and i < 0:
+        values = self.jni_batch_get([key], check=check)
+        if check and key not in values:
             raise RuntimeError(f"未读取到 JNI 值：{key}")
-        v = log[i+2:].strip() if i >= 0 else "N/A"
+        v = str(values.get(key, "N/A"))
         _adb_log(f"jni_get {key} => {v}")
         return v
 
@@ -760,21 +786,12 @@ class Adb:
         if not safe_keys:
             return {}
 
-        with self.transaction():
-            jar = "/data/data/mitv.service/cache/MtkDirectTool.jar"
-            batch_command = build_tvservice_app_process_command(
-                jar, ["MtkDirectTool", "batchGet"] + safe_keys
-            )
-            cmd = (
-                f"mkdir -p /sdcard/Download/Mimonitor_Toolbox; "
-                f"rm -f {MTK_BATCH_RESULT_FILE}; "
-                f"{batch_command} >/dev/null; "
-                f"i=0; while [ $i -lt 30 ] && [ ! -f {MTK_BATCH_RESULT_FILE} ]; do sleep 0.1; i=$((i+1)); done; "
-                f"cat {MTK_BATCH_RESULT_FILE} 2>/dev/null"
-            )
-            out = self.shell(cmd, check=check)
-
-        vals = parse_jni_batch_output(out)
+        def parse_batch(output):
+            receipt = dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
+            if (receipt.get("__version"), receipt.get("__action"), receipt.get("__complete")) != ("1", "getBatch", "1") or "fatal" in receipt:
+                raise RuntimeError("批量 JNI 回读不完整")
+            return {k: v for k, v in parse_jni_batch_output(output).items() if k in safe_keys and isinstance(v, int)}
+        vals = self._native_helper_result("getBatch", safe_keys, parse_batch)
         if check and not vals:
             raise RuntimeError("未读取到批量 JNI 值")
         _adb_log(f"jni_batch_get {','.join(safe_keys)} => {vals}")

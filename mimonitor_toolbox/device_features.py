@@ -794,12 +794,15 @@ class DeviceFeaturesMixin:
         async_run(do)
 
     def check_connection(self):
+        if getattr(self, "_display_transition_busy", False):
+            self.message_signal.emit("warn", "正在切换显示配置", "请等待目标屏信号核对完成。")
+            return False
         if not getattr(self, "adb_connected", False):
             self.message_signal.emit("warn", "未连接显示器", "当前未连接到显示器，无法完成此操作！请先在主页建立连接。")
             return False
         return True
 
-    def _run_adb_action(self, label, operation, on_success=None, on_failure=None):
+    def _run_adb_action(self, label, operation, on_success=None, on_failure=None, coalesce_key=None):
         if getattr(self, "_cleanup_done", False):
             return
         ip = str(getattr(self.adb, "ip", "") or "").strip()
@@ -809,6 +812,12 @@ class DeviceFeaturesMixin:
             "on_success": on_success,
             "on_failure": on_failure,
         }
+        if coalesce_key is not None:
+            if not hasattr(self, "_adjustment_sequences"):
+                self._adjustment_sequences = {}
+            sequence = self._adjustment_sequences.get(coalesce_key, 0) + 1
+            self._adjustment_sequences[coalesce_key] = sequence
+            context["coalesce"] = (coalesce_key, sequence)
         feedback = getattr(self, "_dispatching_control", None)
         if feedback:
             context["control_feedback"] = feedback
@@ -823,6 +832,10 @@ class DeviceFeaturesMixin:
 
             try:
                 with self.adb.transaction():
+                    if coalesce_key is not None and self._adjustment_sequences.get(coalesce_key) != sequence:
+                        context["superseded"] = True
+                        finish_cancelled()
+                        return
                     if not self._connection_intent_is_current(intent_generation, ip):
                         finish_cancelled()
                         return
@@ -848,6 +861,9 @@ class DeviceFeaturesMixin:
         if getattr(self, "_cleanup_done", False):
             return
         callback = context.get("on_success") if ok else context.get("on_failure")
+        coalesce = context.get("coalesce")
+        if coalesce and getattr(self, "_adjustment_sequences", {}).get(coalesce[0]) != coalesce[1]:
+            callback = None
         try:
             if callable(callback):
                 callback()
@@ -880,6 +896,9 @@ class DeviceFeaturesMixin:
             self.adb.ip = ""
 
             def do():
+                close_session = getattr(self.adb, "close_helper_session", None)
+                if callable(close_session):
+                    close_session(expected_serial=format_adb_serial(ip))
                 adb_run(["disconnect", format_adb_serial(ip)])
                 self.status_signal.emit("未连接")
                 self.log("连接已断开")
@@ -1592,7 +1611,7 @@ class DeviceFeaturesMixin:
                             ])
                             try:
                                 jni_vals["mode_320"] = (
-                                    1 if int(mode_vals.get("g_fusion_picture__hdmi_edid_version")) == 6 else 0
+                                    1 if int(mode_vals.get("g_fusion_picture__hdmi_edid_version")) in (5, 6) else 0
                                 )
                             except (TypeError, ValueError): pass
                             try:

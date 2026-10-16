@@ -74,8 +74,8 @@ PICTURE_PRESET_JNI_KEYS = (
 ) + PICTURE_PRESET_OPTIONAL_JNI_KEYS
 
 
-# FreeSync 在 DP/USB-C 和 HDMI 上走**不同的 MTK 键**，且"开"的取值也不同
-# （HDMI 侧 3 = 开，DP 侧 1 = 开）。读写都要按当前输入源选键，不能写死。
+# HDMI 的 0/1 对应普通档位，2/3 对应 320Hz 档位；偶数关、奇数开。
+# 按当前 EDID 选择写值，避免普通 FreeSync 开关同时改变分辨率档位。
 FREESYNC_DP_SOURCES = ("29", "30")
 
 
@@ -87,7 +87,19 @@ def freesync_jni_key(source):
 
 
 def freesync_on_value(jni_key):
-    return 3 if jni_key.endswith("freesync_switch") else 1
+    return 1
+
+
+def set_freesync(adb, source, enabled):
+    key = freesync_jni_key(source)
+    value = int(bool(enabled))
+    if key.endswith("freesync_switch"):
+        edid = int(adb.jni_get("g_fusion_picture__hdmi_edid_version", check=True))
+        if edid < 0 or edid > 8:
+            raise RuntimeError("未取得有效的 HDMI 档位，未更改 FreeSync")
+        if edid in (5, 6):
+            value += 2
+    adb.jni_set(key, value, check=True)
 
 
 def freesync_is_on(jni_key, raw):
@@ -117,8 +129,7 @@ def _apply_freesync(adb, values):
     """
     wanted = _as_int(values, "freesync") == 1
     source = adb.get("mitv.tvplayer.hdmi.last.source", check=True)
-    key = freesync_jni_key(source)
-    adb.jni_set(key, freesync_on_value(key) if wanted else 0, check=True)
+    set_freesync(adb, source, wanted)
     adb.refresh_pq(check=True)
 
 
@@ -162,7 +173,7 @@ def _apply_color_temp(adb, values):
     if ui_value not in XIAOMI_TO_MTK_COLOR_TEMP:
         raise ValueError(f"未知色温枚举 {ui_value}")
     adb.jni_set("g_video__clr_temp", XIAOMI_TO_MTK_COLOR_TEMP[ui_value], check=True)
-    adb.put("picture_color_temperature", str(ui_value), check=True)
+    adb.put("picture_color_temperature", str(XIAOMI_TO_MTK_COLOR_TEMP[ui_value]), check=True)
     adb.refresh_pq(check=True)
 
 
@@ -180,7 +191,7 @@ def _apply_color_gains(adb, values):
         adb.require_picture_bank(bank)
         guard["expected_bank"] = bank
     adb.jni_set("g_video__clr_temp", XIAOMI_TO_MTK_COLOR_TEMP[CUSTOM_COLOR_TEMP_VALUE], check=True)
-    adb.put("picture_color_temperature", str(CUSTOM_COLOR_TEMP_VALUE), check=True)
+    adb.put("picture_color_temperature", str(XIAOMI_TO_MTK_COLOR_TEMP[CUSTOM_COLOR_TEMP_VALUE]), check=True)
     receipt = adb.jni_set_color_gains(red, green, blue, check=True, **guard)
     adb.put("picture_red_gain", str(red), check=True)
     adb.put("picture_green_gain", str(green), check=True)

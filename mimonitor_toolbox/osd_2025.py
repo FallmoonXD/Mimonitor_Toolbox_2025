@@ -6,6 +6,18 @@ LIGHT_KEYS = ("atmosphere_light_switcher", "atmosphere_light_effect",
 LIGHT_EFFECTS = ((0, "常亮"), (1, "呼吸"), (2, "七彩梦境"), (3, "七彩跑马灯"))
 LIGHT_COLORS = tuple(enumerate(("深蓝色", "蓝色", "青色", "草绿色", "浅绿色", "金色",
                                "橘红色", "番茄色", "品红色", "紫色", "靛蓝色", "蓝紫色")))
+
+
+def hdmi_refresh_mode_target(enabled, current_edid, freesync):
+    """Match the 2025 OSD branches without changing the logical FreeSync state."""
+    if enabled not in (False, True) or current_edid not in (0, 1, 3, 5, 6, 7) or freesync not in (0, 1, 2, 3):
+        raise ValueError("未取得有效的 HDMI 档位或 FreeSync 状态")
+    on = freesync in (1, 3)
+    if enabled:
+        return (5, 5) if on else (6, 6)
+    return (3, 3) if on else (1, 2)
+
+
 OSD_NATIVE_KEYS = ("g_video__vid_gamma_mode", "g_fusion_picture__hdmi_rgb_range",
                    "g_video__clr_eye_protection_mode", "g_video__vid_od_response_time")
 OSD_OPTIONS = {

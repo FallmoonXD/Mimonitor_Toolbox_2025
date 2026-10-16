@@ -3,7 +3,7 @@
 ; CI 构建: ISCC /DMyAppVersion=<tag> installer\MonitorToolbox.iss
 
 #ifndef MyAppVersion
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.0"
 #endif
 
 #define MyAppName "红米 G Pro 27U 2025 Toolbox"

@@ -1,0 +1,234 @@
+{
+  "date": "2026-10-16",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "source": "HDMI1",
+  "signal_family": "SDR",
+  "with_override_samples": [
+    {
+      "elapsed": 2.01,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          120
+        ],
+        "max_1080p_hz": 120,
+        "has_1080p_320": false,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 3840,
+          "signal_height": 2160,
+          "signal_hz_numerator": 120,
+          "signal_hz_denominator": 1
+        }
+      },
+      "native": {
+        "g_fusion_picture__hdmi_edid_version": 5,
+        "g_video__freesync_switch": 1
+      },
+      "signal_properties": [
+        "1",
+        "0"
+      ]
+    },
+    {
+      "elapsed": 7.12,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          120
+        ],
+        "max_1080p_hz": 120,
+        "has_1080p_320": false,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 3840,
+          "signal_height": 2160,
+          "signal_hz_numerator": 120,
+          "signal_hz_denominator": 1
+        }
+      }
+    },
+    {
+      "elapsed": 8.05,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          120
+        ],
+        "max_1080p_hz": 120,
+        "has_1080p_320": false,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 3840,
+          "signal_height": 2160,
+          "signal_hz_numerator": 120,
+          "signal_hz_denominator": 1
+        }
+      },
+      "native": {
+        "g_fusion_picture__hdmi_edid_version": 5,
+        "g_video__freesync_switch": 1
+      },
+      "signal_properties": [
+        "1",
+        "0"
+      ]
+    },
+    {
+      "elapsed": 12.05,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          120
+        ],
+        "max_1080p_hz": 120,
+        "has_1080p_320": false,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 3840,
+          "signal_height": 2160,
+          "signal_hz_numerator": 120,
+          "signal_hz_denominator": 1
+        }
+      }
+    }
+  ],
+  "without_override_samples": [
+    {
+      "elapsed": 2.02,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          320
+        ],
+        "max_1080p_hz": 320,
+        "has_1080p_320": true,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 1920,
+          "signal_height": 1080,
+          "signal_hz_numerator": 319975,
+          "signal_hz_denominator": 1000
+        }
+      },
+      "windows_320_test_return": 0,
+      "windows_320_apply_return": 0,
+      "native": {
+        "g_fusion_picture__hdmi_edid_version": 5,
+        "g_video__freesync_switch": 1
+      },
+      "signal_properties": [
+        "1",
+        "0"
+      ]
+    },
+    {
+      "elapsed": 7.95,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          320
+        ],
+        "max_1080p_hz": 320,
+        "has_1080p_320": true,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 1920,
+          "signal_height": 1080,
+          "signal_hz_numerator": 319975,
+          "signal_hz_denominator": 1000
+        }
+      }
+    },
+    {
+      "elapsed": 8.18,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          320
+        ],
+        "max_1080p_hz": 320,
+        "has_1080p_320": true,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 1920,
+          "signal_height": 1080,
+          "signal_hz_numerator": 319975,
+          "signal_hz_denominator": 1000
+        }
+      },
+      "native": {
+        "g_fusion_picture__hdmi_edid_version": 5,
+        "g_video__freesync_switch": 1
+      },
+      "signal_properties": [
+        "1",
+        "0"
+      ]
+    },
+    {
+      "elapsed": 12.02,
+      "windows": {
+        "desktop": [
+          1920,
+          1080,
+          320
+        ],
+        "max_1080p_hz": 320,
+        "has_1080p_320": true,
+        "active_signal": {
+          "desktop_width": 1920,
+          "desktop_height": 1080,
+          "signal_width": 1920,
+          "signal_height": 1080,
+          "signal_hz_numerator": 319975,
+          "signal_hz_denominator": 1000
+        }
+      }
+    }
+  ],
+  "production_enable_receipt": {
+    "g_fusion_picture__hdmi_edid_version": 5,
+    "g_video__freesync_switch": 1
+  },
+  "production_disable_receipt": {
+    "g_fusion_picture__hdmi_edid_version": 3,
+    "g_video__freesync_switch": 1
+  },
+  "device_rollback_delay_seconds": 16,
+  "user_reported_no_signal_countdown_seconds": 30,
+  "device_rollback_done": true,
+  "restoration": {
+    "override_restored_exactly": true,
+    "configuration_unchanged": true,
+    "native_fields_compared": 69,
+    "native_differences": {},
+    "active_signal": {
+      "desktop_width": 3840,
+      "desktop_height": 2160,
+      "signal_width": 3840,
+      "signal_height": 2160,
+      "signal_hz_numerator": 159975,
+      "signal_hz_denominator": 1000
+    }
+  },
+  "automatic_tests_passed": 532,
+  "local_installation_verified": true,
+  "installed_executable_sha256": "714E3FF195A90B5864A4F74AC1847067358A15D0CD8A2F15179246EED3A458B6",
+  "installed_ui_conflict_hint_verified": true,
+  "installed_ui_enable_blocked_for_existing_override": true
+}

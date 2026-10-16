@@ -7,6 +7,33 @@ from mimonitor_toolbox.device_features import apply_picture_jni_overrides
 
 
 class OsdProtectionTests(unittest.TestCase):
+    def test_freesync_preserves_normal_and_320hz_edid_families(self):
+        from mimonitor_toolbox.presets import set_freesync
+        for edid, on_value, off_value in ((1, 1, 0), (3, 1, 0), (5, 3, 2), (6, 3, 2)):
+            for enabled, wanted in ((True, on_value), (False, off_value)):
+                with self.subTest(edid=edid, enabled=enabled):
+                    a = mock.Mock()
+                    a.jni_get.return_value = edid
+                    set_freesync(a, '23', enabled)
+                    a.jni_set.assert_called_once_with('g_video__freesync_switch', wanted, check=True)
+
+    def test_unknown_hdmi_edid_cannot_trigger_freesync_write(self):
+        from mimonitor_toolbox.presets import set_freesync
+        a = mock.Mock()
+        a.jni_get.return_value = -1
+        with self.assertRaises(RuntimeError):
+            set_freesync(a, '23', True)
+        a.jni_set.assert_not_called()
+
+    def test_blocked_320hz_entry_point_cannot_send_device_writes(self):
+        from mimonitor_toolbox.display_features import DisplayFeaturesMixin
+        host = mock.Mock()
+        host._320_block_reason.return_value = 'Windows EDID override'
+        DisplayFeaturesMixin._320(host, True)
+        host.adb.jni_set.assert_not_called()
+        host.adb.monitor_refresh_mode.assert_not_called()
+        host._run_adb_action.assert_not_called()
+
     def test_hdmi_freesync_one_is_enabled_on_2025(self):
         from mimonitor_toolbox.presets import freesync_is_on
         self.assertTrue(freesync_is_on('g_video__freesync_switch', '1'))
@@ -76,9 +103,8 @@ class OsdProtectionTests(unittest.TestCase):
     def test_light_driver_failure_does_not_change_osd_settings(self):
         a = Adb()
         values = dict(zip(LIGHT_KEYS, ('1', '0', '2', '0')))
-        with mock.patch.object(a, 'get', side_effect=lambda key, **kw: values[key]), \
-                mock.patch.object(a, 'check_and_heal_colorful_led_tool', return_value=True), \
-                mock.patch.object(a, 'shell', return_value='mode=1\ncolor=3\nreturn=-1\n__complete=1\n'), \
+        with mock.patch.object(a, 'get_many', return_value=values), \
+                mock.patch.object(a, '_session_call', return_value='mode=1\ncolor=3\nreturn=-1\n__complete=1\n'), \
                 mock.patch.object(a, 'put') as put:
             with self.assertRaises(RuntimeError): a.monitor_lights({LIGHT_KEYS[1]: 0})
             put.assert_not_called()

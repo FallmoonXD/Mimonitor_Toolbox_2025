@@ -1345,6 +1345,9 @@ class MemorySuspensionUnderPresetTests(unittest.TestCase):
         remembered = []
 
         class FakeAdb:
+            def jni_get(self, key, check=False):
+                return 1
+
             def transaction(self):
                 from contextlib import nullcontext
                 return nullcontext()

@@ -1,0 +1,477 @@
+{
+  "date": "2026-10-16",
+  "model": "Redmi G Pro 27U 2025 / XMI27B3",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "source": "HDMI1",
+  "freesync": true,
+  "scope": "Local EDID and signal compatibility experiment; no production Dolby PC button implemented or installed",
+  "scheme_1": {
+    "override_disabled_320": {
+      "actual_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "native": {
+        "g_fusion_picture__hdmi_edid_version": 5,
+        "g_video__freesync_switch": 1
+      }
+    },
+    "pc_off_hdr_after_hotplug": [
+      {
+        "label": "normal_sdr_before",
+        "actual_signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native": {
+          "g_video__picture_mode": 10,
+          "g_dovi_info__": 0,
+          "g_video__vid_hdr_tone_mapping_mode": 5
+        },
+        "stable": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "label": "normal_sdr_forced_4k160",
+        "actual_signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native": {
+          "g_video__picture_mode": 10,
+          "g_dovi_info__": 0,
+          "g_video__vid_hdr_tone_mapping_mode": 5
+        },
+        "stable": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "label": "normal_hdr_forced_4k160",
+        "actual_signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native": {
+          "g_video__picture_mode": 16,
+          "g_dovi_info__": 0,
+          "g_video__vid_hdr_tone_mapping_mode": 5
+        },
+        "stable": [
+          "1",
+          "0"
+        ]
+      }
+    ],
+    "note": "PnP monitor restart alone retained the prior Dolby capability once; changing native HDMI EDID 5 to 3 refreshed it"
+  },
+  "scheme_2": {
+    "candidate_sha256": "15e6c408bd01d7600c9c61fff876e9953b7190a47f00e741152d37e2eb641fc7",
+    "construction": "Native 320 EDID with the existing working PC Dolby vendor data block copied, extension count normalized to 2, checksums recalculated",
+    "hdr_initial_signal": {
+      "width": 1920,
+      "height": 1080,
+      "hz": 120.0
+    },
+    "sample_duration_seconds": 60.1,
+    "samples": [
+      {
+        "elapsed": 0.0,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 4.01,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 8.08,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 12.1,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 16.09,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 20.09,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 24.08,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 28.07,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 32.07,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 36.06,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 40.08,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 44.03,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 48.03,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 52.03,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 56.07,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      },
+      {
+        "elapsed": 60.1,
+        "actual_signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native": {
+          "g_fusion_picture__hdmi_edid_version": 5,
+          "g_video__freesync_switch": 1,
+          "g_video__picture_mode": 13,
+          "g_dovi_info__": 1
+        },
+        "signal_properties": [
+          "1",
+          "0"
+        ]
+      }
+    ],
+    "dolby_calibration_comparison": {
+      "fields": 68,
+      "differences": {},
+      "excluded_field": "g_fusion_picture__hdmi_edid_version"
+    },
+    "return_to_4k_dolby": {
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "native": {
+        "g_video__picture_mode": 13,
+        "g_dovi_info__": 1,
+        "g_video__vid_hdr_tone_mapping_mode": 0
+      },
+      "differences": {}
+    },
+    "sdr_native_differences_after": {}
+  },
+  "unsuccessful_4k_profile_merges": [
+    {
+      "case": "union-sdr",
+      "max_1080p_hz_at_320_osd": 120,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 120.0
+      }
+    },
+    {
+      "case": "union-compact",
+      "max_1080p_hz_at_320_osd": 120,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 120.0
+      }
+    },
+    {
+      "case": "union-range",
+      "max_1080p_hz_at_320_osd": 120,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 120.0
+      }
+    },
+    {
+      "case": "union-vrr",
+      "max_1080p_hz_at_320_osd": 120,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 120.0
+      }
+    },
+    {
+      "case": "union-native-frl",
+      "max_1080p_hz_at_320_osd": 120,
+      "actual_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 120.0
+      }
+    }
+  ],
+  "restoration": {
+    "native_fields_compared": 69,
+    "native_differences": {},
+    "configuration_unchanged": true,
+    "original_edid_values_restored": 7,
+    "original_raw_edid_restored": true,
+    "temporary_registry_keys": [],
+    "actual_signal": {
+      "width": 3840,
+      "height": 2160,
+      "hz": 159.975
+    },
+    "windows_hdr": "target=XMI27B3 supported=1 enabled=1",
+    "native_picture_mode": 13,
+    "native_dolby_input": 1,
+    "installed_executable_sha256": "714e3ff195a90b5864a4f74ac1847067358a15d0cd8a2f15179246eed3a458b6",
+    "after_toolbox_start": {
+      "native_fields_compared": 69,
+      "native_differences": {},
+      "configuration_unchanged": true,
+      "windows_signal": {
+        "desktop_width": 3840,
+        "desktop_height": 2160,
+        "signal_width": 3840,
+        "signal_height": 2160,
+        "signal_hz_numerator": 159975,
+        "signal_hz_denominator": 1000
+      }
+    }
+  },
+  "limits": [
+    "One physical monitor, firmware, GPU/driver and HDMI connection tested",
+    "FreeSync off, DP/USB-C, Windows restart persistence and long game workloads not tested",
+    "Requires the existing Windows Dolby components and the working PC Dolby profile; does not provision missing Dolby software",
+    "Existing production 320 guard still blocks Dolby and EDID overrides; this experiment does not remove it"
+  ]
+}

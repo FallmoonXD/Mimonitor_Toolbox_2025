@@ -37,6 +37,7 @@ if "%NEEDS_BUILD%"=="1" (
     --file-version=%APP_VERSION% ^
     --product-version=%APP_VERSION% ^
     --include-data-dir=assets/app=assets/app ^
+  --include-data-dir=assets/display=assets/display ^
     --include-data-files=assets/runtime/adb.exe=assets/runtime/adb.exe ^
     --include-data-files=assets/runtime/AdbWinApi.dll=assets/runtime/AdbWinApi.dll ^
     --include-data-files=assets/runtime/AdbWinUsbApi.dll=assets/runtime/AdbWinUsbApi.dll ^

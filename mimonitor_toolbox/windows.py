@@ -194,6 +194,26 @@ def display_product_code(device_id):
     return parts[1].strip() if len(parts) > 1 else ""
 
 
+def monitor_edid_override_present(device_id):
+    """Read overrides for exactly this monitor instance; None means unavailable."""
+    if sys.platform != "win32":
+        return None
+    parts = str(device_id or "").split("#")
+    if len(parts) < 3 or any(not part or "\\" in part or "/" in part for part in parts[1:3]):
+        return None
+    import winreg
+    path = ("SYSTEM\\CurrentControlSet\\Enum\\DISPLAY\\" + parts[1] + "\\" +
+            parts[2] + "\\Device Parameters\\EDID_OVERRIDE")
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path) as key:
+            return any(winreg.EnumValue(key, i)[0].isdigit()
+                       for i in range(winreg.QueryInfoKey(key)[1]))
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return None
+
+
 # 系统给的占位名，装了通用驱动的显示器都长这样，写进下拉只是噪声（还带本地化变体）
 _GENERIC_MONITOR_NAMES = {
     "generic pnp monitor",

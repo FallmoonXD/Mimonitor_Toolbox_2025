@@ -1,6 +1,8 @@
 """显示器控制、快捷键和 HDR/模式记忆功能。"""
 
 import time
+import base64
+import sys
 
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QColor
@@ -32,9 +34,13 @@ from .presets import (
     new_id,
     unique_name,
     freesync_is_on,
+    set_freesync,
 )
 from .widgets import LoadingSpinner, OverlayResizeFilter
-from .windows import query_windows_hdr_enabled, resolve_hdr_target_display
+from .windows import (
+    query_windows_hdr_enabled, resolve_hdr_target_display,
+    display_product_code, monitor_edid_override_present,
+)
 from .picture_modes import (
     DOLBY_NATIVE_MODES, NATIVE_MODE_CHOICES, native_mode_group,
     picture_mode_choices, picture_signal_family,
@@ -402,9 +408,8 @@ class DisplayFeaturesMixin:
         def operation():
             with self.adb.transaction():
                 self.adb.jni_set("g_video__vid_local_dimming", value, check=True)
-                self.adb.put("picture_local_dimming", str(value), check=True)
-                self.adb.put("tv_picture_video_local_dimming", str(value), check=True)
-                self.adb.refresh_pq(check=True)
+                self.adb.put_many({"picture_local_dimming": str(value), "tv_picture_video_local_dimming": str(value)},
+                                  check=True, refresh=True)
 
         def success():
             self._note_picture_change()
@@ -1082,8 +1087,7 @@ class DisplayFeaturesMixin:
                 if cfg.get("jni"):
                     self.adb.jni_set(cfg["jni"], value, check=True)
                     self.adb.refresh_pq(check=True)
-                for k in settings_keys:
-                    self.adb.put(k, str(value), check=True)
+                self.adb.put_many({k: str(value) for k in settings_keys}, check=True)
 
         def success():
             self.log(f"{cfg['label']}: {value}")
@@ -1094,6 +1098,7 @@ class DisplayFeaturesMixin:
             do,
             success,
             lambda: self._force_refresh_page("picturePage"),
+            coalesce_key=f"setting:{setting}",
         )
 
     def _ensure_color_gain_values(self):
@@ -1348,6 +1353,8 @@ class DisplayFeaturesMixin:
         self._adb_busy_until = max(getattr(self, "_adb_busy_until", 0.0), time.monotonic() + seconds)
 
     def _adb_channel_busy(self):
+        if getattr(self, "_display_transition_busy", False):
+            return True
         if time.monotonic() < getattr(self, "_adb_busy_until", 0.0):
             return True
         if getattr(self, "_page_loading", None):
@@ -1397,6 +1404,8 @@ class DisplayFeaturesMixin:
         self._schedule_hdr_memory_check("切换目标显示器", delay_ms=80)
 
     def _poll_hdr_memory_state(self, reason="timer"):
+        if getattr(self, "_display_transition_busy", False):
+            return
         DisplayFeaturesMixin._poll_picture_signal(self)
         visible_interval = 3000
         background_interval = 8000
@@ -2108,7 +2117,8 @@ class DisplayFeaturesMixin:
                     self.adb.shell("am force-stop com.xiaomi.mitv.tvplayer", check=True)
                     self.adb.shell(f"am start -a com.xiaomi.mitv.tvplayer.EXTSRC_PLAY -n com.xiaomi.mitv.tvplayer/.ExternalSourceActivity --ei input {v} -f 0x10000000", check=True)
                 else:
-                    self.adb.put(k, str(v), check=True)
+                    self.adb.put_many({k: str(v)}, check=True, refresh=True)
+                    return
                 self.adb.refresh_pq(check=True)
 
         def success():
@@ -2191,8 +2201,7 @@ class DisplayFeaturesMixin:
 
         def operation():
             with self.adb.transaction():
-                for setting, setting_value in updates.items():
-                    self.adb.put(setting, str(setting_value), check=True)
+                self.adb.put_many(updates, check=True)
                 if switch_to_game:
                     mode_result.update(self.adb.picture_mode(game_mode, check=True))
                 elif retrigger_game_mode and game_mode_active:
@@ -2235,10 +2244,10 @@ class DisplayFeaturesMixin:
                     if picture_signal_family(state["g_video__picture_mode"], state["g_dovi_info__"]) not in ("SDR", "HDR"):
                         raise RuntimeError("当前输入不能调节色域；Dolby Vision 由杜比处理色彩空间")
                 self.adb.jni_set(jk, v, check=True)
-                self.adb.put(sk, str(v), check=True)
+                updates = {sk: str(v)}
                 if osd_sk:
-                    self.adb.put(osd_sk, str(v), check=True)
-                self.adb.refresh_pq(check=True)
+                    updates[osd_sk] = str(v)
+                self.adb.put_many(updates, check=True, refresh=True)
 
         def success():
             self._note_picture_change()
@@ -2280,13 +2289,11 @@ class DisplayFeaturesMixin:
 
         def operation():
             with self.adb.transaction():
-                self.adb.check_and_heal_jar()
                 outcome = self.adb.hdr_tone_mapping(mtk_value, check=True, **guard)
                 if isinstance(outcome, dict):
                     receipt.update(outcome)
-                self.adb.put("picture_hdr_tone_mapping", str(mtk_value), check=True)
-                self.adb.put(state_key, str(ui_value), check=True)
-                self.adb.refresh_pq(check=True)
+                self.adb.put_many({"picture_hdr_tone_mapping": str(mtk_value), state_key: str(ui_value)},
+                                  check=True, refresh=True)
 
                 actual = self.adb.read_picture_state()
                 if actual["g_video__vid_hdr_tone_mapping_mode"] != mtk_value or (
@@ -2327,8 +2334,11 @@ class DisplayFeaturesMixin:
         def operation():
             with self.adb.transaction():
                 self.adb.jni_set("g_video__clr_temp", jv, check=True)
-                self.adb.put("picture_color_temperature", str(sv), check=True)
-                self.adb.refresh_pq(check=True)
+                # SystemControlManager stores the converted MTK enum in Global.
+                self.adb.put_many({"picture_color_temperature": str(jv)}, check=True, refresh=True)
+                actual = self.adb.jni_batch_get_or_single(["g_video__clr_temp"], check=True)
+                if actual.get("g_video__clr_temp") != jv:
+                    raise RuntimeError("色温最终回读不一致，请刷新后重试")
 
         def success():
             self._note_picture_change()
@@ -2385,7 +2395,7 @@ class DisplayFeaturesMixin:
                 if expected_bank is not None:
                     self.adb.require_picture_bank(expected_bank)
                 self.adb.jni_set("g_video__clr_temp", XIAOMI_TO_MTK_COLOR_TEMP[CUSTOM_COLOR_TEMP_VALUE], check=True)
-                self.adb.put("picture_color_temperature", str(CUSTOM_COLOR_TEMP_VALUE), check=True)
+                self.adb.put("picture_color_temperature", str(XIAOMI_TO_MTK_COLOR_TEMP[CUSTOM_COLOR_TEMP_VALUE]), check=True)
                 outcome = self.adb.jni_set_color_gains(
                     values["picture_red_gain"],
                     values["picture_green_gain"],
@@ -2395,9 +2405,8 @@ class DisplayFeaturesMixin:
                 )
                 if isinstance(outcome, dict):
                     receipt.update(outcome)
-                for setting, _slider_name, _gain_jni_key in gain_controls:
-                    self.adb.put(setting, str(values[setting]), check=True)
-                self.adb.refresh_pq(check=True)
+                self.adb.put_many({setting: str(values[setting]) for setting, _, _ in gain_controls},
+                                  check=True, refresh=True)
 
         def success():
             self._note_picture_change()
@@ -2417,7 +2426,7 @@ class DisplayFeaturesMixin:
             if callable(refresh):
                 QTimer.singleShot(300, lambda: refresh("picturePage"))
 
-        self._run_adb_action(title, operation, success, failure)
+        self._run_adb_action(title, operation, success, failure, coalesce_key="color_gains")
 
     def _fs(self, v):
         # 用户在游戏模式下的主动选择同步进记忆：关掉即清记忆（避免下次回到
@@ -2438,32 +2447,100 @@ class DisplayFeaturesMixin:
         return self.adb.get("mitv.tvplayer.hdmi.last.source", check=check)
 
     def _320(self, on):
-        if not self.check_connection(): return
-        self._mark_adb_busy(2.5)
-        previous = self._take_control_previous("mode_320")
+        if not self.check_connection():
+            return
+        reason = self._320_block_reason() if on else None
+        if reason:
+            self.message_signal.emit("warn", "暂不能开启 320Hz", reason)
+            return
+        self._take_control_previous("mode_320")
+        self._start_display_transition("320Hz 档位", mode_320=bool(on))
+
+    def _320_block_reason(self):
+        values = getattr(self, "current_vals", {})
+        if str(values.get("mitv.tvplayer.hdmi.last.source")) not in ("23", "24"):
+            return "320Hz 切换目前仅完成 HDMI 实机验证。"
+        if values.get("freesync") == 0:
+            return "开启 320Hz 前请先开启 FreeSync。"
+        target = resolve_hdr_target_display(getattr(self, "_hdr_target_displays", None) or [],
+                                            load_settings().get("hdr_target_display_id"))
+        if not target or display_product_code(target["device_id"]).upper() != "XMI27B3":
+            return "无法确定这台显示器对应的 Windows 目标，请先设置目标显示器。"
+        try:
+            from .dolby_pc import read_profile_state
+            state = read_profile_state(target["device_id"])
+            if state["compatible"]:
+                if values.get("freesync") != 1:
+                    return "开启 320Hz 前请先开启 FreeSync。"
+                return None
+        except (OSError, RuntimeError, ValueError, ImportError):
+            pass
+        if picture_signal_family(values.get("g_video__picture_mode"), values.get("g_dovi_info__")) != "SDR":
+            return "请先开启“杜比视界 PC”以启用 HDR 与 320Hz 共存，或关闭 Windows HDR。"
+        override = monitor_edid_override_present(target["device_id"])
+        if override is True:
+            return "Windows 已设置 EDID 覆盖；开启“杜比视界 PC”可应用兼容 320Hz 的配置。"
+        if override is None:
+            return "无法核对目标显示器的 Windows EDID 配置，暂不能开启 320Hz。"
+        return None
+
+    def _set_pc_dolby(self, action):
+        if not self.check_connection():
+            return
+        self._take_control_previous("dolby_pc")
+        self._start_display_transition("杜比视界 PC", pc_action=action)
+
+    def _start_display_transition(self, label, pc_action=None, mode_320=None):
+        if getattr(self, "_display_transition_busy", False):
+            return
+        target = resolve_hdr_target_display(getattr(self, "_hdr_target_displays", None) or [],
+                                            load_settings().get("hdr_target_display_id"))
+        if not target or display_product_code(target["device_id"]).upper() != "XMI27B3":
+            self.message_signal.emit("warn", label, "请先在设置中选择这台 2025 款目标显示器。")
+            return
+        result = {}
+        device_id = target["device_id"]
+        self._display_transition_busy = True
+        self._picture_mode_switch_seq += 1
+        self._mark_adb_busy(5)
+        self.stackedWidget.setEnabled(False)
+        self.log(label + "：正在切换并核对目标屏实际信号…")
 
         def operation():
-            with self.adb.transaction():
-                src = self._get_input_source(check=True)
-                if src in ("29","30"): self.adb.jni_set("g_fusion_picture__dp_edid_version", 3 if on else 2, check=True)
-                else: self.adb.jni_set("g_fusion_picture__hdmi_edid_version", 6 if on else 1, check=True)
-                self.adb.refresh_pq(check=True)
+            from .dolby_pc import DisplayTransition
+            transition = DisplayTransition(self.adb, device_id)
+            saved = load_settings().get("display_normal_modes", {}).get(device_id)
+            normal_mode = base64.b64decode(saved, validate=True) if saved else None
+            if pc_action is not None:
+                result.update(transition.set_pc_dolby(pc_action, normal_mode))
+            else:
+                result.update(transition.set_320(mode_320, normal_mode))
 
-        def success():
-            self.log(f"320Hz: {'开' if on else '关'}")
-            self.current_vals["mode_320"] = 1 if on else 0
-            self._optimistic_highlight("mode_320", 1 if on else 0)
-            # 切换 EDID 版本会连带影响刷新率 / FreeSync / 画面参数，延迟刷新画面页和游戏页以回读真实值
-            self._refresh_pages(("picturePage", "gamePage"), delay_ms=1500, force=True)
-
-        def failure():
-            if previous is not None:
-                self._optimistic_highlight("mode_320", previous)
-
-        self._run_adb_action("320Hz", operation, success, failure)
+        def finish(ok):
+            self._display_transition_busy = False
+            self.stackedWidget.setEnabled(True)
+            self._hdr_last_state = None
+            if ok:
+                from .device_features import apply_picture_jni_overrides
+                values = dict(result["native"])
+                apply_picture_jni_overrides(values, result["native"])
+                values["mode_320"] = int(result["native"].get("g_fusion_picture__hdmi_edid_version") in (5,6))
+                self.values_signal.emit(values)
+                if result.get("normal_mode"):
+                    modes = dict(load_settings().get("display_normal_modes", {}))
+                    modes[device_id] = base64.b64encode(result["normal_mode"]).decode("ascii")
+                    update_settings({"display_normal_modes": modes})
+                signal = result["signal"]
+                self.log(f"{label}已确认：{signal['width']}×{signal['height']}、{signal['hz']:.3f}Hz")
+            self._update_osd_availability()
+            self._refresh_pages(("picturePage", "gamePage"), delay_ms=500, force=True)
+        self._run_adb_action(label, operation, lambda: finish(True), lambda: finish(False))
 
     def _fsync(self, on):
         if not self.check_connection(): return
+        if not on and self.current_vals.get("mode_320") == 1:
+            self.message_signal.emit("warn", "FreeSync", "请先关闭 320Hz 竞技模式，再关闭 FreeSync。")
+            return
         self._mark_adb_busy(2.5)
         previous = self._take_control_previous("freesync")
 
@@ -2480,8 +2557,7 @@ class DisplayFeaturesMixin:
         def operation():
             with self.adb.transaction():
                 src = self._get_input_source(check=True)
-                if src in ("29","30"): self.adb.jni_set("g_video__dp_adaptive_sync", 1 if on else 0, check=True)
-                else: self.adb.jni_set("g_video__freesync_switch", 3 if on else 0, check=True)
+                set_freesync(self.adb, src, on)
                 # 关闭 FreeSync 且开启模式记忆：先切回开启前的画面模式，再刷新数据（切换早于刷新）
                 if not on and restore_mode is not None:
                     self.adb.picture_mode(restore_mode, check=True)
@@ -2590,6 +2666,46 @@ class DisplayFeaturesMixin:
         if eye_card is not None:
             eye_card.setEnabled(False)
             eye_card.setToolTip("此固件的护眼开关会重载白平衡，目前仅显示状态")
+        mode_card = getattr(self, "mode_320_card", None)
+        pc_card = getattr(self, "dolby_pc_card", None)
+        if pc_card is not None:
+            pc_reason = "仅支持 Windows、2025 款实体屏和 HDMI 输入。"
+            state = None
+            if sys.platform == "win32" and getattr(self, "adb_connected", False) and str(vals.get("mitv.tvplayer.hdmi.last.source")) in ("23", "24"):
+                target = resolve_hdr_target_display(getattr(self, "_hdr_target_displays", None) or [],
+                                                    load_settings().get("hdr_target_display_id"))
+                if target and display_product_code(target["device_id"]).upper() == "XMI27B3":
+                    try:
+                        from .dolby_pc import read_profile_state
+                        state = read_profile_state(target["device_id"])
+                        pc_reason = ""
+                    except (OSError, RuntimeError, ValueError) as error:
+                        pc_reason = str(error)
+            if not pc_reason and vals.get("freesync") == 0:
+                pc_reason = "请先开启 FreeSync；当前 PC 杜比配置仅验证了 FreeSync 开启的组合。"
+            pc_card.setEnabled(not pc_reason and not getattr(self, "_display_transition_busy", False))
+            if state:
+                self.current_vals["dolby_pc"] = int(state["enabled"])
+                for value, button in getattr(self, "state_buttons", {}).get("dolby_pc", {}).items():
+                    if not button.property("controlPending"):
+                        self._highlight_btn(button, value == int(state["enabled"]))
+                self.dolby_pc_restore.setEnabled(state["managed"])
+            hint = getattr(self, "dolby_pc_hint", None)
+            if hint is not None:
+                if pc_reason:hint.setText(pc_reason)
+                elif state["compatible"]:hint.setText("PC 杜比兼容配置已启用，可与 320Hz 共存。Windows 需已有杜比支持；HDR 开关保持原状态。")
+                elif state["enabled"]:hint.setText("检测到原有 PC 杜比配置；点击“开”可启用 320Hz 兼容配置。原配置会保留供恢复。")
+                else:hint.setText("开启后支持 PC 杜比与 320Hz 共存；需要 Windows 已有杜比支持。切换时需要管理员权限。")
+        if mode_card is not None:
+            connected = bool(getattr(self, "adb_connected", False))
+            source_ok = str(vals.get("mitv.tvplayer.hdmi.last.source")) in ("23", "24")
+            mode_card.setEnabled(connected and source_ok)
+            reason = self._320_block_reason() if connected and source_ok else "连接 HDMI 输入后可切换刷新率档位。"
+            for value, button in getattr(self, "state_buttons", {}).get("mode_320", {}).items():
+                button.setEnabled(connected and source_ok and (not value or not reason) and not button.property("controlPending"))
+            hint = getattr(self, "mode_320_hint", None)
+            if hint is not None:
+                hint.setText(reason or "开启后自动选择 1920×1080、320Hz并核对实际信号；关闭后恢复进入前的分辨率。")
 
     def _key(self, kcode):
         if not self.check_connection(): return
