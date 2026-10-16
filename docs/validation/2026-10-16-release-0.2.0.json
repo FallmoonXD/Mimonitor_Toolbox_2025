@@ -360,5 +360,179 @@
     "One GPU/driver, firmware and HDMI connection; FreeSync enabled",
     "Windows restart and long game workload persistence not tested",
     "Requires existing Windows Dolby components and enabled Dolby mode"
-  ]
+  ],
+  "packaged_validation": {
+    "date": "2026-10-17",
+    "tag": "v2025-0.2.0",
+    "source_commit": "34b6d60c656290ca2e248e841c8953cbbdcdf1e9",
+    "workflow_url": "https://github.com/FallmoonXD/Mimonitor_Toolbox_2025/actions/runs/38927325111",
+    "ci_tests_passed": 550,
+    "release_asset_sha256": {
+      "MonitorToolbox2025-Setup.exe": "f485fe817ebc7246b8fd27624ec49d1cf5911882d5bd9572368d7ba7f43e9935",
+      "MonitorToolbox2025-portable.zip": "51b09b523c0d5cccecf2fecadc36ed7e72ec04a3de9413f86a9b665799a075d0"
+    },
+    "executable_sha256": "ae3d8c585255276178c93b517e12132471d035ce1973e13e5df35ca40bef3d54",
+    "helper_sha256": "62bb6249d19ba4ea56c48889f28caf0b177dd5b3dbd5d46180a5af06adb65300",
+    "required_assets_present": [
+      "MonitorToolbox2025.exe",
+      "README.md",
+      "README.upstream.md",
+      "assets/app/icon.ico",
+      "assets/app/tray.ico",
+      "assets/runtime/adb.exe",
+      "assets/runtime/MtkDirectTool.jar",
+      "assets/runtime/ColorfulLedTool.jar",
+      "assets/adb_guardian/adbguardian-signed.apk",
+      "assets/display/edid_profile.ps1",
+      "assets/display/xmi27b3-320.hex"
+    ],
+    "private_configuration_packaged": false,
+    "portable_path_contains_spaces": true,
+    "toolbox_restart_preserves_return_mode": true,
+    "states": [
+      {
+        "stage": "portable-startup",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "configuration_unchanged": true,
+        "hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native_dolby": 1,
+        "native_mode": 13,
+        "original_edid_restored": true
+      },
+      {
+        "stage": "portable-pc-on",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "configuration_unchanged": true,
+        "hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native_dolby": 1,
+        "native_mode": 13,
+        "original_edid_restored": false
+      },
+      {
+        "stage": "portable-320",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "configuration_unchanged": true,
+        "hdr": true,
+        "signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native_dolby": 1,
+        "native_mode": 13,
+        "original_edid_restored": false
+      },
+      {
+        "stage": "portable-restarted-320",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "configuration_unchanged": true,
+        "hdr": true,
+        "signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "native_dolby": 1,
+        "native_mode": 13,
+        "original_edid_restored": false
+      },
+      {
+        "stage": "portable-return-4k",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "configuration_unchanged": true,
+        "hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native_dolby": 1,
+        "native_mode": 13,
+        "original_edid_restored": false
+      },
+      {
+        "stage": "portable-restored",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "configuration_unchanged": true,
+        "hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native_dolby": 1,
+        "native_mode": 13,
+        "original_edid_restored": true
+      },
+      {
+        "stage": "installed-startup",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "configuration_unchanged": true,
+        "hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "native_dolby": 1,
+        "native_mode": 13,
+        "original_edid_restored": true
+      }
+    ],
+    "comparison_note": "320Hz stages expect native HDMI EDID 5; the other original parameters remain unchanged",
+    "color_metadata": {
+      "original": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        }
+      },
+      "compatible-4k": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        }
+      },
+      "compatible-320": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        }
+      }
+    },
+    "installed_version": "0.2.0.0",
+    "installed_binary_matches_release": true,
+    "final_original_edid_restored": true,
+    "final_configuration_unchanged": true,
+    "final_native_differences": {}
+  }
 }
