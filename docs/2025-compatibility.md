@@ -40,6 +40,8 @@ Dolby 和 SDR 输入均已验证拒绝 HDR tone 写入。Dolby 页面显示当�
 
 ## Windows 杜比联动
 
+2026-10-17 补充：杜比偏好也可以保存在原生普通档和 320Hz 档，停用 PC 覆盖后仍可能输出 Dolby Vision。切换配置时保留 Windows 的选择，不将其误判为覆盖刷新失败。新的 25 项实际按钮场景、异常回滚及客户端退出恢复结果见 [v0.2.1 切换验收](validation/2026-10-17-release-0.2.1.json)。
+
 | Windows HDR | Windows Dolby Vision | 实机原生状态 |
 | --- | --- | --- |
 | 开 | 开 | 模式 13，`g_dovi_info__=1` |

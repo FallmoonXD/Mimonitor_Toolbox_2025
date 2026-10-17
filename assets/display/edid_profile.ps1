@@ -3,6 +3,7 @@ $ErrorActionPreference='Stop'
 $requestPath=[IO.Path]::GetFullPath($Request)
 $job=Get-Content -LiteralPath $requestPath -Raw -Encoding UTF8|ConvertFrom-Json
 if($job.version -ne 1 -or $job.action -notin @('on','off','restore')){throw 'Invalid display request'}
+if($job.refresh -and $job.refresh -notin @('monitor','hdmi')){throw 'Invalid EDID refresh method'}
 if($job.instance -notmatch '^DISPLAY\\XMI27B3\\[A-Za-z0-9&_-]+$'){throw 'Only an exact XMI27B3 instance is accepted'}
 $reply=$requestPath+'.reply'
 $decision=$requestPath+'.decision'
@@ -38,6 +39,7 @@ function Read-Values($key){
  return $result
 }
 function Restart-Target {
+ if($job.refresh -eq 'hdmi'){return}
  $null=& "$env:SystemRoot\System32\pnputil.exe" /restart-device $job.instance
  if($LASTEXITCODE -ne 0){throw "Monitor re-enumeration failed: $LASTEXITCODE"}
 }
@@ -83,7 +85,8 @@ try{
  }
  Restart-Target
  Reply 'applied' 'Waiting for signal verification'
- $deadline=[DateTime]::UtcNow.AddSeconds(20)
+ # Restore the registry before the monitor's 16-second HDMI recovery fires.
+ $deadline=[DateTime]::UtcNow.AddSeconds(10)
  while($true){
   if(Test-Path -LiteralPath $decision){
    $choice=(Get-Content -LiteralPath $decision -Raw).Trim()
@@ -91,7 +94,7 @@ try{
    throw 'Display verification requested rollback'
   }
   if(Test-Path -LiteralPath $lease){
-   $updated=(Get-Item -LiteralPath $lease).LastWriteTimeUtc.AddSeconds(20)
+   $updated=(Get-Item -LiteralPath $lease).LastWriteTimeUtc.AddSeconds(10)
    if($updated -gt $deadline){$deadline=$updated}
   }
   if([DateTime]::UtcNow -gt $deadline){throw 'Display verification timed out; restoring previous EDID'}

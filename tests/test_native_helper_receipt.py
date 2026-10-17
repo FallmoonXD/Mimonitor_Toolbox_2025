@@ -8,7 +8,7 @@ import unittest
 
 import _isolation  # noqa: F401
 
-from mimonitor_toolbox.adb import parse_native_action_result, parse_native_picture_state
+from mimonitor_toolbox.adb import parse_native_action_result, parse_native_picture_state, parse_native_input_signal
 
 
 @unittest.skipUnless(shutil.which("javac") and shutil.which("java"), "JDK is needed for Java receipt tests")
@@ -49,6 +49,8 @@ public class Log { public static int d(String t,String m){return 0;} public stat
 """,
             "com/mediatek/twoworlds/tv/TVNative.java": """package com.mediatek.twoworlds.tv;
 public class TVNative {
+ public static boolean lost=false,lossOnSecond=false; public static int lossReads=0;
+ public static boolean isSignalLoss_native(){return lost || (lossOnSecond && ++lossReads>1);}
  public static int result=0, tone=0, forced=-2, bank=16, dovi=0, writes=0, red=1024, green=1024, blue=1024;
  public static int getConfigValue_native(int n,String k) {
   if(k.equals("test_write_count")) return writes;
@@ -66,6 +68,17 @@ public class TVNative {
   writes++; if(result==0){ if(k.equals("g_video__picture_mode")) bank=v; else tone=v; }
   if(afterDovi>=0)dovi=afterDovi;
   return result;
+ }
+}
+""",
+            "com/mediatek/twoworlds/tv/MtkTvAVMode.java": """package com.mediatek.twoworlds.tv;
+public class MtkTvAVMode {
+ public static boolean empty=false;
+ public static MtkTvAVMode getInstance(){return new MtkTvAVMode();}
+ public java.util.List<Video> getInputSourceVideoAvailableRecord(){return empty?java.util.Collections.emptyList():java.util.Collections.singletonList(new Video());}
+ public static class Video {
+  public int getVideoWidth(){return 3840;} public int getVideoHeight(){return 2160;}
+  public int getVideoFrameRate(){return 160;} public int getVideoDolbyVision(){return TVNative.dovi;}
  }
 }
 """,
@@ -113,7 +126,10 @@ public class ReceiptHarness {
   boolean rgb=action.equals("rgb"), mode=action.equals("mode"), read=action.startsWith("read");
   TVNative.dovi=args.length>8?Integer.parseInt(args[8]):0;
   TVNative.afterDovi=args.length>9?Integer.parseInt(args[9]):-1;
-  receipt.append("__version=1\\n__action=").append(read?"getPictureState":mode?"setPictureMode":rgb?"setColorGains":"setHdrToneMapping").append("\\n");
+  boolean signal=action.startsWith("read-signal");
+  TVNative.lost=action.equals("read-signal-lost");TVNative.lossOnSecond=action.equals("read-signal-race");
+  com.mediatek.twoworlds.tv.MtkTvAVMode.empty=action.equals("read-signal-empty");
+  receipt.append("__version=1\\n__action=").append(signal?"getInputSignal":read?"getPictureState":mode?"setPictureMode":rgb?"setColorGains":"setHdrToneMapping").append("\\n");
   Method setter=TVNative.class.getMethod("setConfigValue_native",int.class,String.class,int.class,int.class);
   Method operation=helper.getDeclaredMethod("setHdrToneMapping",ClassLoader.class,Method.class,int.class,int.class);
   Method guard=helper.getDeclaredMethod("checkBank",ClassLoader.class,int.class);
@@ -122,7 +138,7 @@ public class ReceiptHarness {
    guard.invoke(null,ClassLoader.getSystemClassLoader(),Integer.parseInt(args[5]));
    if(read){
     if(action.equals("read-race"))TVNative.bank=IMiTVProvider.afterBank;
-    Method state=helper.getDeclaredMethod("getPictureState",ClassLoader.class);
+    Method state=helper.getDeclaredMethod(signal?"getInputSignal":"getPictureState",ClassLoader.class);
     state.setAccessible(true);state.invoke(null,ClassLoader.getSystemClassLoader());
    } else if(mode){
     Method picture=helper.getDeclaredMethod("setPictureMode",ClassLoader.class,Method.class,int.class,int.class);
@@ -160,6 +176,23 @@ public class ReceiptHarness {
         self.assertEqual(receipt["provider_return"], -1)
         self.assertTrue(receipt["native_verified"])
         self.assertTrue(receipt["warnings"])
+
+    def test_input_signal_reads_actual_native_timing_without_setters(self):
+        output = self.receipt(action="read-signal", before=13, bank=13, expected=13, dovi=1)
+        signal = parse_native_input_signal(output)
+        self.assertEqual({key:signal[key] for key in ("lost","width","height","hz","dolby")},
+                         {"lost":False,"width":3840,"height":2160,"hz":160,"dolby":1})
+        self.assertIn("__test_writes=0", output)
+
+    def test_lost_signal_does_not_return_old_video_timing(self):
+        signal = parse_native_input_signal(self.receipt(action="read-signal-lost"))
+        self.assertTrue(signal["lost"])
+        self.assertNotIn("width", signal)
+
+    def test_input_loss_race_and_absent_tracks_cannot_confirm_signal(self):
+        for action in ("read-signal-race", "read-signal-empty"):
+            with self.subTest(action=action), self.assertRaises(RuntimeError):
+                parse_native_input_signal(self.receipt(action=action))
 
     def test_real_helper_native_failure_is_rejected(self):
         with self.assertRaisesRegex(RuntimeError, "setter 返回 -1"):

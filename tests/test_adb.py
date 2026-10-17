@@ -6,6 +6,13 @@ from unittest import mock
 class AdbModuleTests(unittest.TestCase):
     """捕获私有 server 端口丢失和 MiTV 型号识别失效。"""
 
+    def test_subprocess_decodes_utf8_output_on_chinese_windows(self):
+        import sys
+        from mimonitor_toolbox import adb as adb_runtime
+        command = [sys.executable, "-c", "import sys;sys.stdout.buffer.write('已连接'.encode('utf-8'))"]
+        with mock.patch.object(adb_runtime, "adb_command", return_value=command):
+            self.assertEqual(adb_runtime.adb_run(["connect", "test"], check=True), "已连接")
+
     def test_adb_command_uses_private_server_port(self):
         from mimonitor_toolbox import adb as adb_runtime
 

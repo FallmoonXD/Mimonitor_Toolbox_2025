@@ -58,16 +58,22 @@ class TransitionTests(unittest.TestCase):
         obj.windows.current_mode.return_value=bytes(dm)
         obj.windows.find_mode.return_value=bytes(dm)
         obj.windows.signal.return_value={'width':1920,'height':1080,'hz':319.975}
+        obj.windows.hdr_enabled.return_value=True
+        obj.adb.read_picture_state.return_value={'g_video__picture_mode':13,'g_dovi_info__':1}
+        obj.adb.read_input_signal.side_effect=lambda:{'picture':obj.adb.read_picture_state(),
+            'lost':False,**obj.windows.signal()}
+        obj._wait_link=mock.Mock()
         return obj
 
-    def test_hdr_enable_is_followed_by_another_explicit_320_selection(self):
-        obj=self.make_transition();calls=[]
-        obj.windows.set_hdr.side_effect=lambda value:calls.append(('hdr',value))
-        obj.windows.select_mode.side_effect=lambda *mode:calls.append(('mode',mode))
+    def test_restored_target_output_does_not_trigger_hdr_or_mode_setters(self):
+        obj=self.make_transition()
+        dm=DevMode.from_buffer_copy(obj.old_mode);dm.width=1920;dm.height=1080;dm.hz=320
+        obj.windows.find_mode.return_value=bytes(dm)
         with mock.patch.object(pc,'read_profile_state',return_value={'values':{'0':'data'},'compatible':True,'enabled':True}), \
              mock.patch.object(pc,'NativeRecovery') as watchdog:
             result=obj.set_320(True)
-        self.assertEqual(calls,[('hdr',False),('mode',(1920,1080,320)),('hdr',True),('mode',(1920,1080,320))])
+        obj.windows.set_hdr.assert_not_called()
+        obj.windows.apply_mode.assert_not_called()
         self.assertEqual(result['normal_mode'],obj.old_mode)
         watchdog.return_value.stop.assert_called_once()
 
@@ -81,7 +87,7 @@ class TransitionTests(unittest.TestCase):
         obj.windows.set_hdr.assert_not_called()
 
     def test_windows_mode_failure_recovers_instead_of_reporting_success(self):
-        obj=self.make_transition();obj.windows.select_mode.side_effect=RuntimeError('mode unavailable')
+        obj=self.make_transition();obj.windows.apply_mode.side_effect=RuntimeError('mode unavailable')
         obj._recover=mock.Mock()
         with mock.patch.object(pc,'read_profile_state',return_value={'values':{},'compatible':True,'enabled':True}), \
              mock.patch.object(pc,'NativeRecovery'):
@@ -130,22 +136,84 @@ class TransitionTests(unittest.TestCase):
         obj.registry_change=mock.Mock();obj.registry_change.finish.side_effect=lambda value:calls.append('registry')
         obj._native_edid=mock.Mock(side_effect=lambda value:calls.append(value))
         obj.recovery=mock.Mock()
+        obj._restore_output=mock.Mock()
         with mock.patch.object(pc.time,'sleep'):
             obj._recover()
         self.assertEqual(calls,['registry',5,3])
-        obj.windows.apply_mode.assert_called_once_with(obj.old_mode)
+        obj._restore_output.assert_called_once_with(obj.old_mode,True)
 
-    def test_hdr_transition_waits_for_stable_sdr_output_before_enabling_hdr(self):
-        obj=self.make_transition();calls=[]
-        obj._wait_family=mock.Mock(side_effect=lambda family,mode=None:calls.append(('stable',family)))
-        obj.windows.set_hdr.side_effect=lambda enabled:calls.append(('hdr',enabled))
-        obj.windows.select_mode.side_effect=lambda *args:calls.append(('mode',args))
+    def test_opposite_cached_hdr_is_corrected_without_sdr_round_trip(self):
+        obj=self.make_transition()
+        dm=DevMode.from_buffer_copy(obj.old_mode);dm.width=1920;dm.height=1080;dm.hz=320
+        obj.windows.find_mode.return_value=bytes(dm)
+        obj.adb.monitor_refresh_mode.side_effect=lambda enabled:setattr(obj.windows.hdr_enabled,'return_value',False)
         with mock.patch.object(pc,'read_profile_state',return_value={'values':{},'compatible':True,'enabled':True}), \
              mock.patch.object(pc,'NativeRecovery'):
             obj.set_320(True)
-        self.assertLess(calls.index(('mode',(1920,1080,320))),calls.index(('hdr',True)))
-        self.assertEqual(calls[:4],[('hdr',False),('stable','SDR'),('mode',(1920,1080,320)),('stable','SDR')])
-        self.assertIn(('stable','Dolby Vision'),calls)
+        obj.windows.set_hdr.assert_called_once_with(True)
+        obj.windows.apply_mode.assert_not_called()
+
+    def test_cached_hdr_is_disabled_when_source_intent_was_sdr(self):
+        obj=self.make_transition();obj.old_hdr=False
+        dm=DevMode.from_buffer_copy(obj.old_mode);dm.width=1920;dm.height=1080;dm.hz=320
+        obj.windows.find_mode.return_value=bytes(dm)
+        with mock.patch.object(pc,'read_profile_state',return_value={'values':{},'compatible':True,'enabled':True}), \
+             mock.patch.object(pc,'NativeRecovery'):
+            obj.set_320(True)
+        obj.windows.set_hdr.assert_called_once_with(False)
+
+    def test_refresh_is_corrected_once_only_after_hdr_changes_it(self):
+        obj=self.make_transition();obj.windows.hdr_enabled.return_value=False
+        dm=DevMode.from_buffer_copy(obj.old_mode);dm.width=1920;dm.height=1080;dm.hz=320
+        obj.windows.find_mode.return_value=bytes(dm)
+        events=[]
+        def enable_hdr(enabled):
+            events.append('hdr')
+            obj.windows.signal.return_value={'width':1920,'height':1080,'hz':120}
+        obj.windows.set_hdr.side_effect=enable_hdr
+        obj.windows.apply_mode.side_effect=lambda mode:events.append('mode')
+        with mock.patch.object(pc,'read_profile_state',return_value={'values':{},'compatible':True,'enabled':True}), \
+             mock.patch.object(pc,'NativeRecovery'):
+            obj.set_320(True)
+        self.assertEqual(events,['hdr','mode'])
+        obj.windows.apply_mode.assert_called_once_with(bytes(dm))
+
+    def test_unoverridden_hdr_can_enter_competitive_mode(self):
+        obj=self.make_transition()
+        with mock.patch.object(pc,'read_profile_state',return_value={'values':{},'compatible':False,'enabled':False}), \
+             mock.patch.object(pc,'NativeRecovery'):
+            obj.set_320(True)
+        obj.adb.monitor_refresh_mode.assert_called_once_with(True)
+
+    def test_cached_dxgi_hdr_with_native_sdr_is_repaired_without_disabling_hdr_first(self):
+        obj=self.make_transition()
+        obj.windows.signal.return_value={'width':3840,'height':2160,'hz':159.975}
+        obj.adb.read_picture_state.return_value={'g_video__picture_mode':10,'g_dovi_info__':0}
+        obj._wait_family=mock.Mock(side_effect=[RuntimeError('native still SDR'),None,None])
+        obj._restore_output(obj.old_mode,True)
+        obj.windows.set_hdr.assert_called_once_with(True)
+        obj.windows.apply_mode.assert_not_called()
+
+    def test_pc_profile_reconnect_does_not_repeat_resolution_setters(self):
+        obj=self.make_transition();obj._restore_output=mock.Mock();obj._native_edid=mock.Mock()
+        with mock.patch.object(pc,'read_profile_state',return_value={'raw':TEMPLATE,'compatible':False,'managed':True,'enabled':False}), \
+             mock.patch.object(pc,'NativeRecovery'),mock.patch.object(pc,'EdidChange') as change:
+            obj.set_pc_dolby('on')
+        self.assertEqual(obj._native_edid.call_args_list,[mock.call(5),mock.call(3)])
+        obj.windows.set_hdr.assert_not_called()
+        obj.windows.apply_mode.assert_not_called()
+        self.assertEqual(change.call_args.kwargs,{'refresh':'hdmi'})
+        change.return_value.finish.assert_called_once_with(True)
+
+    def test_hdr_resynchronization_does_not_repeat_hdmi_hotplug(self):
+        obj=self.make_transition();obj._native_edid=mock.Mock()
+        obj._restore_output=mock.Mock(side_effect=[RuntimeError('stale capabilities'),None])
+        with mock.patch.object(pc,'read_profile_state',return_value={'raw':TEMPLATE,'compatible':False,'managed':True,'enabled':False}), \
+             mock.patch.object(pc,'NativeRecovery'),mock.patch.object(pc,'EdidChange'),mock.patch.object(pc.time,'sleep'):
+            obj.set_pc_dolby('on')
+        self.assertEqual(obj._native_edid.call_args_list,[mock.call(5),mock.call(3)])
+        self.assertEqual(obj._restore_output.call_count,2)
+        obj.windows.set_hdr.assert_called_once_with(False)
 
     def test_repeated_320_off_keeps_current_normal_mode_without_reconnection(self):
         obj=self.make_transition()
@@ -161,8 +229,76 @@ class TransitionTests(unittest.TestCase):
             obj.set_pc_dolby('on')
         registry.assert_not_called();watchdog.assert_not_called();obj.windows.set_hdr.assert_not_called()
 
+    def test_unavailable_input_restarts_consecutive_family_confirmation(self):
+        obj=self.make_transition()
+        valid={'lost':False,'width':3840,'height':2160,'hz':160,'picture':obj.before}
+        obj.adb.read_input_signal.side_effect=[valid,RuntimeError('reconnecting'),valid,valid]
+        obj._wait_family('Dolby Vision')
+        predicate=obj._wait.call_args.args[0]
+        self.assertFalse(predicate())
+        with self.assertRaisesRegex(RuntimeError,'reconnecting'):predicate()
+        self.assertFalse(predicate())
+        self.assertTrue(predicate())
+
+    def test_link_disconnect_is_excluded_from_stable_interval(self):
+        obj=self.make_transition()
+        obj._wait_link=pc.DisplayTransition._wait_link.__get__(obj)
+        with mock.patch.object(pc.time,'monotonic',return_value=0) as clock:
+            obj._wait_link()
+            predicate=obj._wait.call_args.args[0]
+            self.assertFalse(predicate())
+            clock.return_value=.4
+            obj.windows.signal.side_effect=OSError('path disappeared')
+            with self.assertRaises(OSError):predicate()
+            obj.windows.signal.side_effect=None
+            clock.return_value=.6
+            self.assertFalse(predicate())
+            clock.return_value=1.2
+            self.assertTrue(predicate())
+
+    def test_signal_loss_or_different_native_timing_cannot_pass_windows_only_check(self):
+        obj=self.make_transition()
+        obj.adb.jni_batch_get_or_single.return_value=obj.before
+        obj.windows.signal.return_value={'width':3840,'height':2160,'hz':159.975}
+        obj._check_signal=pc.DisplayTransition._check_signal.__get__(obj)
+        obj._check_signal(obj.old_mode,True)
+        predicate=obj._wait.call_args.args[0]
+        obj.adb.read_input_signal.side_effect=None
+        obj.adb.read_input_signal.return_value={'picture':obj.before,'lost':True}
+        self.assertFalse(predicate())
+        obj.adb.read_input_signal.return_value={'picture':obj.before,'lost':False,'width':1920,'height':1080,'hz':320}
+        self.assertFalse(predicate())
+        obj.adb.read_input_signal.return_value={'picture':obj.before,'lost':False,'width':3840,'height':2160,'hz':160}
+        self.assertTrue(predicate())
+
+    def test_windows_dolby_choice_is_respected_with_or_without_pc_override(self):
+        obj=self.make_transition()
+        obj.windows.signal.return_value={'width':3840,'height':2160,'hz':159.975}
+        obj.adb.jni_batch_get_or_single.return_value=obj.before
+        obj._check_signal=pc.DisplayTransition._check_signal.__get__(obj)
+        obj._check_signal(obj.old_mode,None)
+        predicate=obj._wait.call_args.args[0]
+        for mode,dovi,expected in ((13,1,True),(16,0,True),(10,0,False)):
+            with self.subTest(mode=mode):
+                obj.adb.read_picture_state.return_value={'g_video__picture_mode':mode,'g_dovi_info__':dovi}
+                self.assertEqual(predicate(),expected)
+
 
 class RegistryReadTests(unittest.TestCase):
+    @unittest.skipUnless(__import__('sys').platform=='win32','Windows registry')
+    def test_driver_edid_must_match_the_requested_capabilities(self):
+        import winreg
+        profile=pc.compatible_profile(TEMPLATE,TEMPLATE)
+        with mock.patch.object(winreg,'OpenKey'),mock.patch.object(winreg,'QueryValueEx') as read:
+            read.return_value=(profile,winreg.REG_BINARY)
+            self.assertFalse(pc.edid_is_loaded(TARGET,TEMPLATE))
+            self.assertTrue(pc.edid_is_loaded(TARGET,TEMPLATE,profile))
+            read.return_value=(TEMPLATE,winreg.REG_BINARY)
+            self.assertTrue(pc.edid_is_loaded(TARGET,TEMPLATE))
+            self.assertFalse(pc.edid_is_loaded(TARGET,TEMPLATE,profile))
+            self.assertTrue(pc.edid_is_loaded(TARGET,TEMPLATE,{0:TEMPLATE[:128]}))
+            self.assertFalse(pc.edid_is_loaded(TARGET,TEMPLATE,{1:profile[128:256]}))
+
     @unittest.skipUnless(__import__('sys').platform=='win32','Windows registry')
     def test_profile_read_is_scoped_to_exact_monitor_and_never_writes(self):
         import winreg

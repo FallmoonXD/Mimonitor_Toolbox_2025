@@ -1,0 +1,1009 @@
+{
+  "version": "0.2.1",
+  "date": "2026-10-17",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "source": "HDMI1",
+  "freesync": true,
+  "method": "Real Qt buttons call production controllers on the selected physical monitor; CCD timings, native video records, picture banks and driver EDID readback",
+  "distinct_control_cases": 25,
+  "cases": [
+    {
+      "control": "PC already on",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 0.512,
+      "click_feedback_ms": 2.21,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": []
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "Dolby 320 on",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 9.494,
+      "click_feedback_ms": 2.6,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "Dolby 320 off",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.031,
+      "click_feedback_ms": 2.11,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "Enter 320 to cache SDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.106,
+      "click_feedback_ms": 2.99,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "SDR return corrects cached HDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 11.175,
+      "click_feedback_ms": 2.15,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": false,
+      "native_mode": 10,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [
+          false
+        ],
+        "mode": [],
+        "edid": [
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "SDR enter matching cache",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 9.144,
+      "click_feedback_ms": 3.16,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": false,
+      "native_mode": 10,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "HDR return corrects cached SDR",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 12.395,
+      "click_feedback_ms": 2.12,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [
+          true
+        ],
+        "mode": [],
+        "edid": [
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC off follows native Windows Dolby choice",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.475,
+      "click_feedback_ms": 2.32,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC on follows Windows choice",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.328,
+      "click_feedback_ms": 2.16,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC off with Windows HDR10 choice",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.225,
+      "click_feedback_ms": 2.07,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 16,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "HDR10 320 on",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.457,
+      "click_feedback_ms": 2.58,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": true,
+      "native_mode": 16,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC on at 320 preserves Windows HDR10 choice",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 9.239,
+      "click_feedback_ms": 2.37,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": true,
+      "native_mode": 16,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          3,
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC off at 320 follows native HDR10 choice",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.277,
+      "click_feedback_ms": 2.16,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": true,
+      "native_mode": 16,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          3,
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "HDR10 320 off",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.841,
+      "click_feedback_ms": 2.18,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 16,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC on normal preserves Windows HDR10 choice",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.319,
+      "click_feedback_ms": 2.12,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 16,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC off restores Windows Dolby choice",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.245,
+      "click_feedback_ms": 2.24,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "PC on after preference restoration",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.353,
+      "click_feedback_ms": 2.05,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "SDR PC off",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.207,
+      "click_feedback_ms": 2.17,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": false,
+      "native_mode": 10,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "SDR 320 on",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.956,
+      "click_feedback_ms": 2.64,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": false,
+      "native_mode": 10,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [
+          false
+        ],
+        "mode": [],
+        "edid": [
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": false,
+        "compatible": false,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "SDR PC on at 320",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 9.232,
+      "click_feedback_ms": 2.21,
+      "signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 319.975
+      },
+      "hdr": false,
+      "native_mode": 10,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 1920,
+        "height": 1080,
+        "hz": 320,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          3,
+          5
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "Restore original directly from SDR 320",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 10.249,
+      "click_feedback_ms": 2.03,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": false,
+      "native_mode": 10,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": false,
+        "managed": false,
+        "saved": false
+      }
+    },
+    {
+      "control": "SDR PC on normal",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 8.215,
+      "click_feedback_ms": 2.09,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": false,
+      "native_mode": 10,
+      "native_dolby": 0,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "Capability reload failure rolls back",
+      "expected_success": false,
+      "actual_success": false,
+      "seconds": 18.779,
+      "click_feedback_ms": 2.67,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          3,
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "320 timing unavailable rolls back",
+      "expected_success": false,
+      "actual_success": false,
+      "seconds": 19.913,
+      "click_feedback_ms": 2.87,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": [
+          5,
+          5,
+          3
+        ]
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    },
+    {
+      "control": "320 already off",
+      "expected_success": true,
+      "actual_success": true,
+      "seconds": 0.584,
+      "click_feedback_ms": 2.07,
+      "signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 159.975
+      },
+      "hdr": true,
+      "native_mode": 13,
+      "native_dolby": 1,
+      "native_signal": {
+        "width": 3840,
+        "height": 2160,
+        "hz": 160,
+        "lost": false
+      },
+      "calls": {
+        "hdr": [],
+        "mode": [],
+        "edid": []
+      },
+      "pc_profile": {
+        "enabled": true,
+        "compatible": true,
+        "managed": true,
+        "saved": true
+      }
+    }
+  ],
+  "restoration": {
+    "native_differences": {},
+    "profile_unchanged": true,
+    "configuration_unchanged": true,
+    "signal": {
+      "width": 3840,
+      "height": 2160,
+      "hz": 159.975
+    },
+    "hdr": true
+  },
+  "native_guard_field_count": 69,
+  "client_crash": {
+    "method": "Exit desktop client after off-profile registry apply and native 320 change; no parent restoration writes",
+    "seconds": 26.874,
+    "events": [
+      [
+        3.281,
+        {
+          "registry_restored": false,
+          "read_error": "原生输入时序不可用或读取期间发生变化"
+        }
+      ],
+      [
+        9.015,
+        {
+          "registry_restored": false,
+          "input": {
+            "lost": false,
+            "picture": {
+              "g_video__picture_mode": 10,
+              "g_dovi_info__": 0,
+              "g_video__vid_hdr_tone_mapping_mode": 5
+            },
+            "width": 1920,
+            "height": 1080,
+            "hz": 320,
+            "dolby": 0
+          },
+          "signal": {
+            "width": 1920,
+            "height": 1080,
+            "hz": 319.975
+          },
+          "hdr": false,
+          "edid": 5
+        }
+      ],
+      [
+        13.159,
+        {
+          "registry_restored": true,
+          "input": {
+            "lost": false,
+            "picture": {
+              "g_video__picture_mode": 10,
+              "g_dovi_info__": 0,
+              "g_video__vid_hdr_tone_mapping_mode": 5
+            },
+            "width": 1920,
+            "height": 1080,
+            "hz": 320,
+            "dolby": 0
+          },
+          "signal": {
+            "width": 1920,
+            "height": 1080,
+            "hz": 319.975
+          },
+          "hdr": false,
+          "edid": 5
+        }
+      ],
+      [
+        21.989,
+        {
+          "registry_restored": true,
+          "read_error": "原生输入时序不可用或读取期间发生变化"
+        }
+      ],
+      [
+        26.772,
+        {
+          "registry_restored": true,
+          "input": {
+            "lost": false,
+            "picture": {
+              "g_video__picture_mode": 13,
+              "g_dovi_info__": 1,
+              "g_video__vid_hdr_tone_mapping_mode": 0
+            },
+            "width": 3840,
+            "height": 2160,
+            "hz": 160,
+            "dolby": 1
+          },
+          "signal": {
+            "width": 3840,
+            "height": 2160,
+            "hz": 159.975
+          },
+          "hdr": true,
+          "edid": 3
+        }
+      ]
+    ],
+    "native_differences": {},
+    "configuration_unchanged": true
+  },
+  "findings": {
+    "native_edid_can_follow_windows_dolby_preference": true,
+    "preference_probe_restored": true,
+    "debug_signal_properties_were_stale_on_normally_visible_image": true,
+    "pc_changes_skip_monitor_pnp_restart": true,
+    "matching_output_skips_hdr_and_mode_setters": true
+  },
+  "limits": [
+    "One target physical screen active; other-adapter display paths were not enabled for this run",
+    "Physical black-screen count was not measured; setter counts are reported separately",
+    "An early HDR10 320 attempt timed out and rolled back; subsequent isolated and matrix attempts passed",
+    "Client-crash recovery does not establish automatic recovery after power loss"
+  ],
+  "offline_tests": {
+    "passed": true,
+    "count": 567
+  },
+  "calibration_checks": {
+    "icc_and_gamma_unchanged": true,
+    "native_hdr_preferences_restored": true
+  }
+}

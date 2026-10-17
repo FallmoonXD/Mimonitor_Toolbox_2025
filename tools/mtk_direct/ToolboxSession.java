@@ -94,7 +94,8 @@ public final class ToolboxSession {
                     String result;
                     try {
                         if (readOnly && !("native".equals(request[1]) && arguments.length > 0
-                                && ("getBatch".equals(arguments[0]) || "getPictureState".equals(arguments[0]))))
+                                && ("getBatch".equals(arguments[0]) || "getPictureState".equals(arguments[0])
+                                    || "getInputSignal".equals(arguments[0]))))
                             throw new IllegalArgumentException("Read-only session");
                         result = "OK\n" + execute(request[1], arguments);
                     }

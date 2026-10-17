@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-17",
+  "product": "Redmi G Pro 27U 2025",
+  "firmware": "OS3.0.109.0.UFFMAMN",
+  "connection": "HDMI, FreeSync enabled",
+  "method": "User-operated remote and Windows HDR settings for the selected display, with the toolbox exited and no active EDID override",
+  "first_case": [
+    {"stage": "Save HDR in competitive mode", "actual_signal": {"width": 1920, "height": 1080, "hz": 319.975}, "actual_hdr": true, "edid_base_checksum": "8B"},
+    {"stage": "Return to normal mode", "actual_signal": {"width": 3840, "height": 2160, "hz": 159.975}, "actual_hdr": false, "edid_base_checksum": "FC"},
+    {"stage": "Enter competitive mode again", "actual_signal": {"width": 1920, "height": 1080, "hz": 319.975}, "actual_hdr": true, "edid_base_checksum": "8B"}
+  ],
+  "first_case_limitation": "ADB transport disconnected after toolbox exit. Windows actual output was recorded; native input was not continuously available during this case.",
+  "reverse_case": [
+    {"stage": "Save SDR in competitive mode", "actual_signal": {"width": 1920, "height": 1080, "hz": 319.975}, "actual_hdr": false, "edid_base_checksum": "8B", "native_edid": 5, "native_picture_mode": 10, "native_dovi": 0},
+    {"stage": "Enable HDR in normal mode", "actual_signal": {"width": 3840, "height": 2160, "hz": 159.975}, "actual_hdr": true, "edid_base_checksum": "FC", "native_edid": 3, "native_picture_mode": 16, "native_dovi": 0},
+    {"stage": "Enter competitive mode again", "actual_signal": {"width": 1920, "height": 1080, "hz": 319.975}, "actual_hdr": false, "edid_base_checksum": "8B", "native_edid": 5, "native_picture_mode": 10, "native_dovi": 0}
+  ],
+  "finding": "The current Windows/driver configuration restored the previously selected HDR state for the normal and competitive HDMI EDID configurations in both crossing directions. This does not establish historical behavior, a universal Windows rule, or the necessity of any cache deletion.",
+  "restored": {
+    "actual_signal": {"width": 3840, "height": 2160, "hz": 159.975},
+    "actual_hdr": true,
+    "compatible_pc_dolby_profile_enabled": true,
+    "native_picture_mode": 13,
+    "native_dovi": 1,
+    "encoding": "RGB",
+    "bits_per_color": 10,
+    "native_parameters_compared_to_release_snapshot": 69,
+    "release_snapshot_differences": {},
+    "toolbox_configuration_unchanged_by_restore_and_restart": true,
+    "toolbox_restarted_and_connected": true,
+    "observer_stopped": true
+  }
+}

@@ -29,7 +29,7 @@ public class MtkDirectTool {
 
     public static String executeSession(String[] args) throws Exception {
         if (args.length == 0 || !(args[0].equals("set") || args[0].equals("getBatch")
-                || args[0].equals("getPictureState") || args[0].equals("setColorGainsChecked")
+                || args[0].equals("getPictureState") || args[0].equals("getInputSignal") || args[0].equals("setColorGainsChecked")
                 || args[0].equals("setHdrToneMappingChecked") || args[0].equals("setPictureModeChecked")
                 || args[0].equals("setOsdOptionChecked") || args[0].equals("setSystemOptionChecked")
                 || args[0].equals("setHdrToneMapping") || args[0].equals("setColorGains")))
@@ -93,6 +93,27 @@ public class MtkDirectTool {
 
     private static void getPictureState(ClassLoader loader) throws Exception {
         readCheckedValues(loader, "g_video__picture_mode", "g_dovi_info__", "g_video__vid_hdr_tone_mapping_mode");
+    }
+
+    private static void getInputSignal(ClassLoader loader) throws Exception {
+        Class<?> nativeClass = loader.loadClass("com.mediatek.twoworlds.tv.TVNative");
+        Method loss = nativeClass.getDeclaredMethod("isSignalLoss_native");
+        loss.setAccessible(true);
+        boolean lost = (Boolean) loss.invoke(null);
+        receipt("input.lost_before", lost ? 1 : 0);
+        if (!lost) {
+            Class<?> av = loader.loadClass("com.mediatek.twoworlds.tv.MtkTvAVMode");
+            Object instance = av.getMethod("getInstance").invoke(null);
+            java.util.List<?> records = (java.util.List<?>) av.getMethod("getInputSourceVideoAvailableRecord").invoke(instance);
+            if (records == null || records.size() != 1) throw new IllegalStateException("No unique active input video");
+            Object video = records.get(0);
+            String[] names = {"width", "height", "hz", "dolby"};
+            String[] getters = {"getVideoWidth", "getVideoHeight", "getVideoFrameRate", "getVideoDolbyVision"};
+            for (int i = 0; i < names.length; i++)
+                receipt("input." + names[i], video.getClass().getMethod(getters[i]).invoke(video));
+        }
+        receipt("input.lost_after", (Boolean) loss.invoke(null) ? 1 : 0);
+        getPictureState(loader);
     }
 
     private static void setPictureMode(ClassLoader loader, Method setter, int value, int update) throws Exception {
@@ -233,13 +254,13 @@ public class MtkDirectTool {
         String cmd = args[0];
         if (cmd.equals("setColorGainsChecked") || cmd.equals("setHdrToneMappingChecked")
                 || cmd.equals("setPictureModeChecked") || cmd.equals("setOsdOptionChecked")
-                || cmd.equals("setSystemOptionChecked") || cmd.equals("getPictureState") || cmd.equals("getBatch")) {
+                || cmd.equals("setSystemOptionChecked") || cmd.equals("getPictureState") || cmd.equals("getInputSignal") || cmd.equals("getBatch")) {
             int required = cmd.equals("setColorGainsChecked") || cmd.equals("setOsdOptionChecked") || cmd.equals("setSystemOptionChecked") ? 6 : 5;
-            if (cmd.equals("getPictureState")) required = 2;
+            if (cmd.equals("getPictureState") || cmd.equals("getInputSignal")) required = 2;
             if (cmd.equals("getBatch")) required = args.length >= 3 ? args.length : 3;
             if (args.length != required) throw new IllegalArgumentException("Invalid checked action arguments");
             checkedResultFile = args[args.length - 1];
-            if (!cmd.equals("getPictureState") && !cmd.equals("getBatch")) expectedBank = Integer.parseInt(args[args.length - 2]);
+            if (!cmd.equals("getPictureState") && !cmd.equals("getInputSignal") && !cmd.equals("getBatch")) expectedBank = Integer.parseInt(args[args.length - 2]);
             if (!checkedResultFile.matches("/sdcard/Download/Mimonitor_Toolbox/\\.mtk_action_[a-f0-9]+\\.txt")) {
                 throw new IllegalArgumentException("Invalid checked result path");
             }
@@ -265,6 +286,12 @@ public class MtkDirectTool {
             if ("getPictureState".equals(cmd)) {
                 readOnlyAction = true;
                 getPictureState(classLoader);
+                return;
+            }
+
+            if ("getInputSignal".equals(cmd)) {
+                readOnlyAction = true;
+                getInputSignal(classLoader);
                 return;
             }
 

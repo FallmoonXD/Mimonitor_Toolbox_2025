@@ -260,6 +260,8 @@ def adb_run(args, timeout=10, check=False):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
+                    encoding="utf-8",
+                    errors="replace",
                     creationflags=NO_WINDOW,
                     stdin=subprocess.DEVNULL,
                 )
@@ -380,9 +382,9 @@ def parse_native_action_result(output, action, expected):
             "bank_before": bank_before, "bank_after": bank_after, "warnings": warnings}
 
 
-def parse_native_picture_state(output):
+def parse_native_picture_state(output, *, action="getPictureState"):
     values = dict(line.strip().split("=", 1) for line in output.splitlines() if "=" in line)
-    if (values.get("__version"), values.get("__action"), values.get("__complete")) != ("1", "getPictureState", "1"):
+    if (values.get("__version"), values.get("__action"), values.get("__complete")) != ("1", action, "1"):
         raise RuntimeError("原生画面状态不完整")
     if "fatal" in values:
         raise RuntimeError(f"读取原生画面状态失败：{values['fatal']}")
@@ -400,6 +402,24 @@ def parse_native_picture_state(output):
         raise RuntimeError("读取期间输入信号发生变化，请稍后刷新")
     return {"g_video__picture_mode": mode, "g_dovi_info__": dovi,
             "g_video__vid_hdr_tone_mapping_mode": tone}
+
+
+def parse_native_input_signal(output):
+    picture = parse_native_picture_state(output, action="getInputSignal")
+    values = dict(line.strip().split("=", 1) for line in output.splitlines() if "=" in line)
+    try:
+        lost = int(values["input.lost_before"])
+        if lost not in (0, 1) or int(values["input.lost_after"]) != lost:
+            raise ValueError
+        result = {"lost": bool(lost), "picture": picture}
+        if not lost:
+            result.update({key: int(values["input." + key]) for key in ("width", "height", "hz", "dolby")})
+            if (min(result[key] for key in ("width", "height", "hz")) <= 0
+                    or result["dolby"] != picture["g_dovi_info__"]):
+                raise ValueError
+        return result
+    except (KeyError, TypeError, ValueError):
+        raise RuntimeError("原生输入时序不可用或读取期间发生变化") from None
 
 
 class Adb:
@@ -585,10 +605,9 @@ class Adb:
             source = self.get("mitv.tvplayer.hdmi.last.source", check=True).strip()
             if source not in ("23", "24"):
                 raise RuntimeError("320Hz 切换目前仅完成 HDMI 实机验证")
-            if enabled:
-                state = self.read_picture_state()
-                if picture_signal_family(state.get("g_video__picture_mode"), state.get("g_dovi_info__")) != "SDR":
-                    raise RuntimeError("320Hz 切换目前仅完成 SDR 实机验证")
+            state = self.read_picture_state()
+            if picture_signal_family(state.get("g_video__picture_mode"), state.get("g_dovi_info__")) not in ("SDR", "HDR", "Dolby Vision"):
+                raise RuntimeError("目标屏输入信号未确认，停止切换刷新率档位")
             key = "g_fusion_picture__hdmi_edid_version"
             fs_key = "g_video__freesync_switch"
             before = self.jni_batch_get_or_single([key, fs_key], check=True)
@@ -632,6 +651,9 @@ class Adb:
 
     def read_picture_state(self):
         return self._native_helper_result("getPictureState", [], parse_native_picture_state)
+
+    def read_input_signal(self):
+        return self._native_helper_result("getInputSignal", [], parse_native_input_signal)
 
     def osd_option(self, option, value, expected_bank=None):
         from .osd_2025 import native_option_value

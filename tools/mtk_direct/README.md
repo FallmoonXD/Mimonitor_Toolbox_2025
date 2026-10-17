@@ -37,14 +37,22 @@ over the socket; no shared result file or logcat is used by the desktop.
 The worker also dispatches the existing ColorfulLedTool driver method without
 starting another JVM. It exits after ten minutes without a connection.
 
-`ToolboxSession <directory> readonly` rejects every action except `getBatch`
-and `getPictureState`; this mode is used for nondisruptive device latency checks.
+`ToolboxSession <directory> readonly` rejects every action except `getBatch`,
+`getPictureState` and `getInputSignal`; this mode is used for nondisruptive device latency checks.
 `getBatch <key...> <result-file>` uses the versioned receipt protocol and has no
 fixed settling delay. Legacy one-shot commands remain available.
 
 `getPictureState <result-file>` is getter-only. It reads the native picture mode,
 Dolby signal flag, and HDR tone, including scene/signal guards before and after.
 It uses a unique versioned result instead of the shared logcat or batch result.
+
+`getInputSignal <result-file>` also reads `TVNative.isSignalLoss_native()` before
+and after `MtkTvAVMode.getInputSourceVideoAvailableRecord()`. Its receipt contains
+the active input's width, height, frame rate and Dolby flag. Python rejects missing
+or ambiguous video records, signal-loss races and disagreements with picture
+readback. Lost input never returns the last video record as a current timing.
+These getters replace `debug.signal.*` properties in display transition checks;
+those debug properties can remain stale after a driver restart.
 
 For checked writes, `setPictureModeChecked <native-mode> <update> <expected-bank> <result-file>`,
 `setColorGainsChecked <r> <g> <b> <expected-bank> <result-file>` and

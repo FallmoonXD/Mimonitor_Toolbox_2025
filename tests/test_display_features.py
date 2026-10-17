@@ -5,6 +5,21 @@ from unittest import mock
 class DisplayFeatureTests(unittest.TestCase):
     """捕获画面模式分组在迁移后丢失或映射错误。"""
 
+    def test_periodic_availability_does_not_overwrite_active_transition_stage(self):
+        from mimonitor_toolbox.display_features import DisplayFeaturesMixin
+        host=DisplayFeaturesMixin()
+        host._display_transition_busy=True
+        host._display_transition_hint='mode_320_hint'
+        host.mode_320_hint=mock.Mock();host.log=mock.Mock()
+        host._active_picture_scene_mode=mock.Mock(side_effect=AssertionError('must not poll during transition'))
+        host._on_display_transition_stage('核对实际画面信号')
+        host._update_osd_availability()
+        host.mode_320_hint.setText.assert_called_once_with('核对实际画面信号…')
+        host._active_picture_scene_mode.assert_not_called()
+        host._display_transition_busy=False
+        host._on_display_transition_stage('late stage')
+        self.assertEqual(host.mode_320_hint.setText.call_count,1)
+
     def test_picture_mode_group_maps_presets_to_primary_mode(self):
         from mimonitor_toolbox.display_features import DisplayFeaturesMixin
 

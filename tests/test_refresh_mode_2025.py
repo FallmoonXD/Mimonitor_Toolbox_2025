@@ -60,14 +60,24 @@ class RefreshModeTests(unittest.TestCase):
                 a.monitor_refresh_mode(True)
         read.assert_not_called()
 
-    def test_dolby_source_change_is_rejected_before_refresh_write(self):
+    def test_unconfirmed_source_is_rejected_before_refresh_write(self):
         a=Adb()
         with mock.patch.object(a,'get',return_value='23'), \
-             mock.patch.object(a,'read_picture_state',return_value={'g_video__picture_mode':13,'g_dovi_info__':1}), \
+             mock.patch.object(a,'read_picture_state',return_value={'g_video__picture_mode':-1,'g_dovi_info__':0}), \
              mock.patch.object(a,'jni_set') as setter:
-            with self.assertRaisesRegex(RuntimeError,'SDR'):
+            with self.assertRaisesRegex(RuntimeError,'输入信号未确认'):
                 a.monitor_refresh_mode(True)
         setter.assert_not_called()
+
+    def test_hdr_and_dolby_can_change_hdmi_mode_without_an_sdr_write(self):
+        for mode,dovi in ((16,0),(13,1)):
+            a=Adb()
+            with self.subTest(mode=mode),mock.patch.object(a,'get',return_value='23'), \
+                 mock.patch.object(a,'read_picture_state',return_value={'g_video__picture_mode':mode,'g_dovi_info__':dovi}), \
+                 mock.patch.object(a,'jni_batch_get_or_single',side_effect=[{EDID:3,FS:1},{EDID:5,FS:1}]), \
+                 mock.patch.object(a,'jni_set') as setter,mock.patch.object(a,'shell'):
+                a.monitor_refresh_mode(True)
+            setter.assert_called_once_with(EDID,5,check=True)
 
     def test_changed_freesync_cannot_report_success(self):
         a = Adb()

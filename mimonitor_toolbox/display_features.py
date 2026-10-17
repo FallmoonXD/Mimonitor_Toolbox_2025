@@ -2475,8 +2475,6 @@ class DisplayFeaturesMixin:
                 return None
         except (OSError, RuntimeError, ValueError, ImportError):
             pass
-        if picture_signal_family(values.get("g_video__picture_mode"), values.get("g_dovi_info__")) != "SDR":
-            return "请先开启“杜比视界 PC”以启用 HDR 与 320Hz 共存，或关闭 Windows HDR。"
         override = monitor_edid_override_present(target["device_id"])
         if override is True:
             return "Windows 已设置 EDID 覆盖；开启“杜比视界 PC”可应用兼容 320Hz 的配置。"
@@ -2505,10 +2503,12 @@ class DisplayFeaturesMixin:
         self._mark_adb_busy(5)
         self.stackedWidget.setEnabled(False)
         self.log(label + "：正在切换并核对目标屏实际信号…")
+        self._display_transition_hint = "dolby_pc_hint" if pc_action is not None else "mode_320_hint"
+        self._on_display_transition_stage('正在准备切换')
 
         def operation():
             from .dolby_pc import DisplayTransition
-            transition = DisplayTransition(self.adb, device_id)
+            transition = DisplayTransition(self.adb, device_id, self.display_transition_stage_signal.emit)
             saved = load_settings().get("display_normal_modes", {}).get(device_id)
             normal_mode = base64.b64decode(saved, validate=True) if saved else None
             if pc_action is not None:
@@ -2535,6 +2535,14 @@ class DisplayFeaturesMixin:
             self._update_osd_availability()
             self._refresh_pages(("picturePage", "gamePage"), delay_ms=500, force=True)
         self._run_adb_action(label, operation, lambda: finish(True), lambda: finish(False))
+
+    def _on_display_transition_stage(self, message):
+        if not getattr(self, "_display_transition_busy", False):
+            return
+        hint = getattr(self, getattr(self, "_display_transition_hint", ""), None)
+        if hint is not None:
+            hint.setText(message + '…')
+        self.log(message)
 
     def _fsync(self, on):
         if not self.check_connection(): return
@@ -2645,6 +2653,8 @@ class DisplayFeaturesMixin:
                 button.setEnabled(bool(active) and not button.property("controlPending"))
 
     def _update_osd_availability(self):
+        if getattr(self, "_display_transition_busy", False):
+            return
         vals = getattr(self, "current_vals", {})
         mode = DisplayFeaturesMixin._active_picture_scene_mode(self)
         family = picture_signal_family(mode, vals.get("g_dovi_info__"))
@@ -2693,9 +2703,9 @@ class DisplayFeaturesMixin:
             hint = getattr(self, "dolby_pc_hint", None)
             if hint is not None:
                 if pc_reason:hint.setText(pc_reason)
-                elif state["compatible"]:hint.setText("PC 杜比兼容配置已启用，可与 320Hz 共存。Windows 需已有杜比支持；HDR 开关保持原状态。")
+                elif state["compatible"]:hint.setText("PC 杜比兼容配置已启用，可与 320Hz 共存。实际输入跟随 Windows 的 HDR 和杜比模式选择。")
                 elif state["enabled"]:hint.setText("检测到原有 PC 杜比配置；点击“开”可启用 320Hz 兼容配置。原配置会保留供恢复。")
-                else:hint.setText("开启后支持 PC 杜比与 320Hz 共存；需要 Windows 已有杜比支持。切换时需要管理员权限。")
+                else:hint.setText("PC 杜比覆盖已停用。实际输入仍跟随 Windows 的 HDR 和杜比模式选择；切换配置需要管理员权限。")
         if mode_card is not None:
             connected = bool(getattr(self, "adb_connected", False))
             source_ok = str(vals.get("mitv.tvplayer.hdmi.last.source")) in ("23", "24")
