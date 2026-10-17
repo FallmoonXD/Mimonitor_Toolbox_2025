@@ -1005,5 +1005,402 @@
   "calibration_checks": {
     "icc_and_gamma_unchanged": true,
     "native_hdr_preferences_restored": true
+  },
+  "packaged_validation": {
+    "date": "2026-10-17",
+    "tag": "v2025-0.2.1",
+    "source_commit": "513f1b324b9a0b3a3c21702bc48cc95cc0344036",
+    "workflow_url": "https://github.com/FallmoonXD/Mimonitor_Toolbox_2025/actions/runs/38994592790",
+    "ci_tests_passed": 567,
+    "release_asset_sha256": {
+      "MonitorToolbox2025-Setup.exe": "b7033006cde129673cdcede98dd3cef0faff3b98ef563d46d607bf243033b96d",
+      "MonitorToolbox2025-portable.zip": "cf36efa8cee4fe165411524f097ec6e09a91218409bd60c540d388b386f18a8d"
+    },
+    "executable_sha256": "549e86e7f579ac788d249f845d3c7f00dd04ea5d1b7602d889043a6d0191ea6b",
+    "helper_sha256": "4c15f1bfdb8488a0e7d3f61b10508753129680fde339f109b1d93b4a93568a28",
+    "required_assets_present": [
+      "MonitorToolbox2025.exe",
+      "README.md",
+      "README.upstream.md",
+      "assets/app/icon.ico",
+      "assets/app/tray.ico",
+      "assets/runtime/adb.exe",
+      "assets/runtime/MtkDirectTool.jar",
+      "assets/runtime/ColorfulLedTool.jar",
+      "assets/adb_guardian/adbguardian-signed.apk",
+      "assets/display/edid_profile.ps1",
+      "assets/display/xmi27b3-320.hex"
+    ],
+    "private_configuration_packaged": false,
+    "portable_path_contains_spaces": true,
+    "toolbox_restart_preserves_return_mode": true,
+    "states": [
+      {
+        "stage": "portable-startup",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 3840,
+          "height": 2160,
+          "hz": 160,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-pc-off",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 3840,
+          "height": 2160,
+          "hz": 160,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": false,
+          "compatible": false,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-pc-on",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 3840,
+          "height": 2160,
+          "hz": 160,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-320-on",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 1920,
+          "height": 1080,
+          "hz": 320,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-restart-320",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 1920,
+          "height": 1080,
+          "hz": 320,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-320-off-after-restart",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 3840,
+          "height": 2160,
+          "hz": 160,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-320-before-original",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 1920,
+          "height": 1080,
+          "hz": 320,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-original-from-320",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 3840,
+          "height": 2160,
+          "hz": 160,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": false,
+          "managed": false,
+          "saved": false
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "portable-restored",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 3840,
+          "height": 2160,
+          "hz": 160,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      },
+      {
+        "stage": "installed-startup",
+        "native_fields_compared": 69,
+        "native_differences": {},
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        },
+        "hdr": true,
+        "native_input": {
+          "lost": false,
+          "picture": {
+            "g_video__picture_mode": 13,
+            "g_dovi_info__": 1,
+            "g_video__vid_hdr_tone_mapping_mode": 0
+          },
+          "width": 3840,
+          "height": 2160,
+          "hz": 160,
+          "dolby": 1
+        },
+        "pc_profile": {
+          "enabled": true,
+          "compatible": true,
+          "managed": true,
+          "saved": true
+        },
+        "real_configuration_unchanged": true
+      }
+    ],
+    "comparison_note": "320Hz stages expect native HDMI EDID 5; other stages expect EDID 3. All other 68 native parameters match the baseline.",
+    "color_metadata": {
+      "portable-4k": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        }
+      },
+      "portable-320-on": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 1920,
+          "height": 1080,
+          "hz": 319.975
+        }
+      },
+      "portable-320-off-after-restart": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        }
+      },
+      "portable-original-from-320": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        }
+      },
+      "installed-startup": {
+        "encoding": 0,
+        "bits_per_color": 10,
+        "actual_hdr": true,
+        "signal": {
+          "width": 3840,
+          "height": 2160,
+          "hz": 159.975
+        }
+      }
+    },
+    "selected_adapter": "NVIDIA GeForce RTX 4070 Ti SUPER",
+    "amd_igpu_during_final_package_tests": "disabled, ConfigManagerErrorCode 22",
+    "installed_version": "0.2.1.0",
+    "installed_binary_matches_release": true,
+    "installed_helper_matches_release": true,
+    "installer_exit_code": 0,
+    "installed_application_connected": true,
+    "no_new_uncaught_exceptions_during_package_tests": true,
+    "final_profile_matches_pretest": true,
+    "final_real_configuration_unchanged": true,
+    "final_native_differences": {},
+    "final_icc_and_gamma_unchanged": true,
+    "other_active_displays_unchanged": true
   }
 }
